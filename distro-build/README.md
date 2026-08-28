@@ -1,47 +1,93 @@
 # OintOS Distro Build
 
-This directory contains the live-build configuration for building the OintOS ISO.
+This directory contains the live-build configuration for building the OintOS ISO
+(Ubuntu 26.04 LTS + KDE Plasma).
 
-## Prerequisites
+## Two build scripts
 
-On the build machine (Ryzen 5 5500 desktop recommended), install:
+- **`build.py`** (recommended) — Python build script with full verbose logging
+  to both console and a timestamped log file. Streaming subprocess output,
+  disk/RAM checks, ISO verification, and automatic SHA-256 generation.
+- **`build.sh`** — simple Bash wrapper (simpler, less logging).
+- **`setup-wsl.sh`** — one-time setup helper for WSL2 Ubuntu (installs
+  prerequisites, verifies tools, guides `.wslconfig` memory bump).
+
+---
+
+## Building inside WSL2 Ubuntu (recommended)
+
+This is the fastest path on the Windows/Ryzen machine.
+
+### 1. One-time WSL2 setup
 
 ```bash
-sudo apt-get install -y \
-    live-build debootstrap squashfs-tools xorriso \
-    genisoimage grub-efi-amd64-bin grub-pc-bin \
-    mtools dosfstools git
+cd ~
+git clone https://github.com/ervinnasiri-99/ointos.git
+cd ointos/distro-build
+./setup-wsl.sh
 ```
 
-## Building the ISO
+The setup script installs live-build + all prerequisites and helps you configure
+WSL2 memory via `.wslconfig` (recommend `memory=8GB`).
+
+> **Important:** keep the repo inside the WSL2 filesystem (`~/ointos`), **not**
+> on `/mnt/c/...` — builds on the Windows drive are far slower.
+
+### 2. Build the ISO
 
 ```bash
-cd distro-build
-sudo ./build.sh
+cd ~/ointos/distro-build
+sudo python3 build.py
 ```
 
-The build takes 30-90 minutes depending on hardware and network speed.
+- Takes **30–90 minutes** depending on hardware/network.
+- Needs **~25 GB free disk** and **~8 GB RAM** peak.
+- Writes a **full verbose log** to `output/build-<timestamp>.log` that mirrors
+  everything to the console.
+- Produces `output/OintOS-1.0-amd64-<date>.iso` + `.sha256`.
 
-Output files are in `output/`:
-- `OintOS-1.0-amd64-YYYYMMDD.iso` — The bootable ISO
-- `OintOS-1.0-amd64-YYYYMMDD.iso.sha256` — SHA-256 checksum
-- `build-YYYYMMDD.log` — Build log
+### 3. Test the ISO in a VM
 
-## Testing the ISO
-
-### QEMU/KVM (recommended)
 ```bash
 qemu-system-x86_64 -cdrom output/OintOS-1.0-amd64-*.iso \
     -m 4096 -enable-kvm -smp 2
 ```
 
-### VirtualBox
-1. Create a new VM (Type: Linux, Version: Ubuntu 64-bit)
-2. Set RAM to 4096 MB
-3. Mount the ISO in the optical drive
-4. Boot the VM
+---
 
-### Test checklist
+## Building on native Ubuntu (bare metal)
+
+```bash
+cd distro-build
+sudo ./build.sh          # or: sudo python3 build.py
+```
+
+Requires the same prerequisites; `build.py` installs them automatically unless
+you pass `--no-prereqs`.
+
+---
+
+## Build disk/RAM requirements
+
+| Resource | Required | Recommended |
+|----------|----------|-------------|
+| Disk space | 25 GB free | 30 GB+ |
+| RAM | 4 GB | 8 GB |
+| Build time | — | 30–90 min |
+
+---
+
+## Output
+
+Output files are in `distro-build/output/`:
+- `OintOS-1.0-amd64-YYYYMMDD.iso` — The bootable ISO
+- `OintOS-1.0-amd64-YYYYMMDD.iso.sha256` — SHA-256 checksum
+- `build-YYYYMMDD-HHMMSS.log` — Full verbose build log
+
+---
+
+## Test checklist (in the VM)
+
 - [ ] ISO boots to live environment
 - [ ] KDE Plasma desktop loads
 - [ ] SDDM login screen appears
@@ -51,11 +97,13 @@ qemu-system-x86_64 -cdrom output/OintOS-1.0-amd64-*.iso \
 - [ ] Brave Browser launches
 - [ ] System settings accessible
 
+---
+
 ## Package Lists
 
 Package lists are in `config/package-lists/`:
 - `base.list.chroot` — Core Ubuntu base system
-- `kde-desktop.list.chroot` — KDE Plasma desktop
+- `kde-desktop.list.chroot` — KDE Plasma desktop (curated)
 - `gaming.list.chroot` — Steam, Wine (placeholder — Phase 9)
 - `btrfs-tools.list.chroot` — Btrfs utilities
 - `system-tools.list.chroot` — System utilities
@@ -68,6 +116,8 @@ Hooks in `config/hooks/live/` run during the build:
 - `0200-kde-defaults.chroot` — Configures KDE defaults
 - `0300-remove-telemetry.chroot` — Removes telemetry
 - `0400-system-tweaks.chroot` — System configuration
+
+---
 
 ## Current Status
 
