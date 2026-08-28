@@ -21,7 +21,7 @@ This is the fastest path on the Windows/Ryzen machine.
 ### 1. One-time WSL2 setup
 
 ```bash
-cd ~
+cd ~                              # or your repo location (e.g. /mnt/d/OintOS/ointos)
 git clone https://github.com/ervinnasiri-99/ointos.git
 cd ointos/distro-build
 ./setup-wsl.sh
@@ -30,8 +30,10 @@ cd ointos/distro-build
 The setup script installs live-build + all prerequisites and helps you configure
 WSL2 memory via `.wslconfig` (recommend `memory=8GB`).
 
-> **Important:** keep the repo inside the WSL2 filesystem (`~/ointos`), **not**
-> on `/mnt/c/...` — builds on the Windows drive are far slower.
+> **Location note:** the Linux filesystem (`~/ointos`) is fastest. Building from
+> a Windows drive like `/mnt/d/...` works but is slower. If WSL2's own virtual
+> disk sits on a space-constrained C:, a D: drive with room is a sensible choice —
+> the build chroot needs ~25 GB. The setup script will warn but let you continue.
 
 ### 2. Build the ISO
 

@@ -15,37 +15,50 @@ set -euo pipefail
 #   3. Offers to create/update a .wslconfig to give WSL2 more memory
 #   4. Verifies the tools work
 #
-# IMPORTANT: The repo should live INSIDE the WSL2 filesystem (e.g. ~/ointos),
-# NOT on /mnt/c/... which is very slow for builds.
+# Note on location: the Linux filesystem (e.g. ~/ointos) is fastest. Building
+# from a Windows drive (/mnt/d/...) works but is slower; /mnt/c/ is the slowest
+# and shares space with Windows C:.
 
 echo ""
 echo "=== OintOS WSL2 Build Environment Setup ==="
 echo ""
 
-# --- Sanity check: are we in WSL? ------------------------------------------
-if ! grep -qi microsoft /proc/version; then
+# Detect whether we're in WSL (used later for guidance)
+is_wsl=0; grep -qi microsoft /proc/version && is_wsl=1
+if [ "$is_wsl" = "0" ]; then
     echo "WARNING: This does not look like a WSL environment."
     echo "         (continuing anyway — the tools are the same on native Ubuntu)"
     echo ""
 fi
 
-# --- Refuse to run from /mnt/c --------------------------------------------
+# --- Working-directory check ---------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 case "$SCRIPT_DIR" in
+    /mnt/c/*)
+        echo "WARNING: Running from the WSL system drive (/mnt/c/...)."
+        echo "         This is slow AND shares space with your Windows C: drive,"
+        echo "         which is usually the most space-constrained."
+        echo ""
+        read -r -p "         Continue anyway? [y/N] " ans
+        [[ "$ans" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 1; }
+        ;;
     /mnt/*)
-        echo "ERROR: This script is being run from the Windows filesystem"
-        echo "       ($SCRIPT_DIR)"
+        # Other Windows drives (D:, E:, ...) — slower than the Linux fs but
+        # often have MUCH more free space. Warn, allow, and remind to free
+        # space on the Linux fs if that ever becomes possible.
+        echo "WARNING: Running from the Windows filesystem ($SCRIPT_DIR)."
+        echo "         Builds here are slower than inside the Linux filesystem,"
+        echo "         but this is fine if you have plenty of space on this drive."
+        echo "         (The live-build chroot can be ~25 GB.)"
         echo ""
-        echo "WSL2 builds are MUCH faster and more reliable inside the Linux"
-        echo "filesystem. Please clone the repo into your WSL2 home and run"
-        echo "from there:"
-        echo ""
-        echo "    cd ~"
-        echo "    git clone https://github.com/ervinnasiri-99/ointos.git"
-        echo "    cd ointos/distro-build"
-        echo "    ./setup-wsl.sh"
-        echo ""
-        exit 1
+        if [ "$is_wsl" = "1" ]; then
+            echo "         If you later free space on your WSL virtual disk (C:),"
+            echo "         you can re-clone into ~/ for faster builds."
+            echo ""
+        fi
+        read -r -p "         Continue? [Y/n] " ans
+        [[ ! "$ans" =~ ^[Nn]$ ]] || { echo "Aborted."; exit 1; }
         ;;
 esac
 
