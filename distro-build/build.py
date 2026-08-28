@@ -314,6 +314,11 @@ def build(args, logger: Logger) -> str:
         "--architectures", args.arch,
         "--archive-areas", "main restricted universe multiverse",
         "--bootloader", "grub",
+        # memtest86+ is installed by default and its postinst has a buggy
+        # `cp chroot/boot/.bin` that fails inside live-build's chroot,
+        # aborting the build at the final install step. Not needed for the
+        # prototype — disable it.
+        "--memtest", "none",
         "--binary-images", "iso-hybrid",
         # No Debian-installer: OintOS uses its own Custom Linux-side installer
         # (Libertix fork), so including d-i just makes live-build try to fetch

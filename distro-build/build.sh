@@ -58,7 +58,7 @@ lb config \
     --archive-areas "main restricted universe multiverse" \
     --bootloader grub \
     --binary-images iso-hybrid \
-    --memtest memtest86+ \
+    --memtest none \
     --debian-installer false \
     --iso-application "OintOS" \
     --iso-publisher "OintOS Project" \

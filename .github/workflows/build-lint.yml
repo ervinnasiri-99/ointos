@@ -92,6 +92,7 @@ jobs:
             --architectures amd64 \
             --archive-areas "main restricted universe multiverse" \
             --bootloader grub \
+            --memtest none \
             --binary-images iso-hybrid \
             --debian-installer false \
             --iso-application "OintOS" \
