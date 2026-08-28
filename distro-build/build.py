@@ -275,22 +275,30 @@ def build(args, logger: Logger) -> str:
     output_dir = args.output
     os.makedirs(output_dir, exist_ok=True)
 
-    # Clean previous build directory
-    logger.step("Cleaning previous build directory")
-    if os.path.isdir(build_dir):
-        logger.info(f"removing {build_dir}")
-        shutil.rmtree(build_dir)
-    os.makedirs(build_dir)
-
-    # Copy config -> build dir
-    logger.step("Copying live-build configuration")
-    src_config = os.path.join(SCRIPT_DIR, "config")
-    dst_config = os.path.join(build_dir, "config")
-    if os.path.isdir(src_config):
-        shutil.copytree(src_config, dst_config)
-        logger.ok(f"copied config to {dst_config}")
+    # Clean previous build directory UNLESS reusing the cache (fast resume).
+    if args.keep_cache and os.path.isdir(build_dir):
+        logger.step("Reusing existing build directory + chroot cache "
+                    "(--keep-cache)")
+        logger.info("A previous install pass will be resumed from cache — "
+                    "this skips debootstrap + package install (saves ~1 hour).")
     else:
-        logger.warn(f"no config directory at {src_config}; using defaults")
+        logger.step("Cleaning previous build directory")
+        if os.path.isdir(build_dir):
+            logger.info(f"removing {build_dir}")
+            shutil.rmtree(build_dir)
+        os.makedirs(build_dir)
+
+        # Copy config -> build dir (only needed on a fresh build; on a
+        # keep-cache resume, `lb config` regenerates it in place and a manual
+        # copytree would collide with the existing config/ dir).
+        logger.step("Copying live-build configuration")
+        src_config = os.path.join(SCRIPT_DIR, "config")
+        dst_config = os.path.join(build_dir, "config")
+        if os.path.isdir(src_config):
+            shutil.copytree(src_config, dst_config)
+            logger.ok(f"copied config to {dst_config}")
+        else:
+            logger.warn(f"no config directory at {src_config}; using defaults")
 
     # lb config
     # NOTE: option names follow Ubuntu's live-build 3.0~a57 (verified via
@@ -307,7 +315,11 @@ def build(args, logger: Logger) -> str:
         "--archive-areas", "main restricted universe multiverse",
         "--bootloader", "grub",
         "--binary-images", "iso-hybrid",
-        "--debian-installer", "live",
+        # No Debian-installer: OintOS uses its own Custom Linux-side installer
+        # (Libertix fork), so including d-i just makes live-build try to fetch
+        # the installer kernel (~archive.ubuntu.com .../installer-amd64/current/
+        # images/cdrom/vmlinuz) which 404s on Ubuntu and isn't needed.
+        "--debian-installer", "false",
         "--iso-application", "OintOS",
         "--iso-publisher", "OintOS Project",
         "--iso-volume", f"OintOS {args.version}",
@@ -394,6 +406,10 @@ def main() -> None:
                         help="skip prerequisite installation")
     parser.add_argument("--keep-logs", type=int, default=10,
                         help="keep last N log files (default: 10)")
+    parser.add_argument("--keep-cache", action="store_true",
+                        help="reuse the existing build/ chroot cache instead of "
+                             "deleting it (resumes a previously failed build "
+                             "from where it stopped — much faster)")
     args = parser.parse_args()
 
     # Prepare log file + logger

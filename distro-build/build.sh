@@ -59,7 +59,7 @@ lb config \
     --bootloader grub \
     --binary-images iso-hybrid \
     --memtest memtest86+ \
-    --debian-installer live \
+    --debian-installer false \
     --iso-application "OintOS" \
     --iso-publisher "OintOS Project" \
     --iso-volume "OintOS $VERSION" \

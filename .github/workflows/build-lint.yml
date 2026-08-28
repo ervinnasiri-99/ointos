@@ -93,7 +93,7 @@ jobs:
             --archive-areas "main restricted universe multiverse" \
             --bootloader grub \
             --binary-images iso-hybrid \
-            --debian-installer live \
+            --debian-installer false \
             --iso-application "OintOS" \
             --iso-publisher "OintOS Project" \
             --iso-volume "OintOS 1.0" \
