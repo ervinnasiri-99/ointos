@@ -97,8 +97,8 @@ jobs:
             --iso-application "OintOS" \
             --iso-publisher "OintOS Project" \
             --iso-volume "OintOS 1.0" \
-            --apt-indices false \
-            --apt-recommends false
+            --apt-indices false
+          # apt-recommends kept ENABLED (default) for a working KDE desktop
           echo "OK: lb config accepted the OintOS configuration"
 
   lint-python:

@@ -63,8 +63,8 @@ lb config \
     --iso-application "OintOS" \
     --iso-publisher "OintOS Project" \
     --iso-volume "OintOS $VERSION" \
-    --apt-indices false \
-    --apt-recommends false
+    --apt-indices false
+    # apt-recommends kept ENABLED (default) so meta-packages pull a working KDE
 
 # Build
 echo ">>> Building ISO (this may take 30-90 minutes)..."

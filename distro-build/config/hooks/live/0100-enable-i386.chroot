@@ -1,9 +1,14 @@
 #!/bin/sh
-# Enable i386 architecture for gaming compatibility (Steam, Wine, Proton)
-
-set -e
-
-dpkg --add-architecture i386
-apt-get update
-
-echo "OintOS: i386 architecture enabled for gaming support"
+# Enable i386 architecture for gaming compatibility (Steam, Wine, Proton).
+#
+# DISABLED for the Phase 3 prototype. Steam's i386 runtime needs i386 package
+# indexes present in the chroot before the app-install pass, which requires a
+# proper live-build multiarch configuration. Re-enable alongside the gaming
+# package list in Phase 9.
+#
+# set -e
+# dpkg --add-architecture i386
+# apt-get update
+#
+# echo "OintOS: i386 architecture enabled for gaming support"
+exit 0

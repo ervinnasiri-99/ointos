@@ -1,7 +1,17 @@
 # OintOS Gaming Packages
-# Placeholder — full gaming stack integration in Phase 9
-
-steam-installer
-wine
-wine64
-winetricks
+#
+# DISABLED for the Phase 3 prototype.
+#
+# Steam requires the i386 (multiarch) runtime (steam-libs-i386) which, in
+# live-build, needs i386 package indexes present in the chroot BEFORE the
+# app-install pass. Getting multiarch+virtual/dependency resolution right in
+# live-build is fiddly, and per the master prompt full gaming integration is
+# explicitly Phase 9. Keeping steam/wine out lets the prototype ISO complete
+# so we can validate the KDE desktop + base system first.
+#
+# Re-enable in Phase 9 together with a proper i386 multiarch configuration.
+#
+# steam-installer
+# wine
+# wine64
+# winetricks

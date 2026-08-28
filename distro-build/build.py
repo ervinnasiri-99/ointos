@@ -312,7 +312,10 @@ def build(args, logger: Logger) -> str:
         "--iso-publisher", "OintOS Project",
         "--iso-volume", f"OintOS {args.version}",
         "--apt-indices", "false",
-        "--apt-recommends", "false",
+        # Kept apt-recommends ENABLED (default) so meta-packages like
+        # kde-plasma-desktop and ubuntu-standard pull a working desktop.
+        # Disabling it produced a large cascade of "not going to be
+        # installed" hard dependencies in the prototype build.
     ]
     run(lb_config, logger, cwd=build_dir)
 
