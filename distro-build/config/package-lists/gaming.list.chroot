@@ -1,0 +1,7 @@
+# OintOS Gaming Packages
+# Placeholder — full gaming stack integration in Phase 9
+
+steam-installer
+wine
+wine64
+winetricks

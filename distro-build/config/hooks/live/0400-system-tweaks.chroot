@@ -1,0 +1,25 @@
+#!/bin/sh
+# System tweaks for OintOS live environment
+
+set -e
+
+# Set hostname
+echo "ointos" > /etc/hostname
+
+# Set timezone to UTC (user configures during OOBE)
+timedatectl set-timezone UTC 2>/dev/null || true
+
+# Configure sudoers to allow group sudo
+cat > /etc/sudoers.d/ointos-defaults << 'EOF'
+# OintOS default sudo configuration
+%sudo ALL=(ALL:ALL) NOPASSWD:ALL
+EOF
+chmod 440 /etc/sudoers.d/ointos-defaults
+
+# Enable NetworkManager
+systemctl enable NetworkManager 2>/dev/null || true
+
+# Set locale
+update-locale LANG=en_US.UTF-8 2>/dev/null || true
+
+echo "OintOS: System tweaks applied"

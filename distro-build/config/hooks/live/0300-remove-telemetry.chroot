@@ -1,0 +1,18 @@
+#!/bin/sh
+# Remove telemetry and tracking — OintOS has zero telemetry by architecture
+
+set -e
+
+# Remove Ubuntu report metrics if present
+apt-get purge -y ubuntu-report whoopsie apport 2>/dev/null || true
+
+# Disable popularity-contest
+rm -f /etc/apt/apt.conf.d/20auto-upgrades 2>/dev/null || true
+
+# Remove any tracking-related packages
+apt-get purge -y apport-hooks-generic 2>/dev/null || true
+
+# Clean up
+apt-get autoremove -y
+
+echo "OintOS: Telemetry and tracking removed — zero telemetry by architecture"

@@ -1,0 +1,18 @@
+#!/bin/sh
+# Add Brave Browser repository and install
+
+set -e
+
+# Add Brave GPG key
+curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
+  https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+
+# Add Brave APT source
+echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] \
+  https://brave-browser-apt-release.s3.brave.com/ stable main" \
+  > /etc/apt/sources.list.d/brave-browser-release.list
+
+apt-get update
+apt-get install -y brave-browser
+
+echo "OintOS: Brave Browser installed successfully"

@@ -1,0 +1,13 @@
+# OintOS System Tools
+# Essential system utilities
+
+htop
+inxi
+git
+build-essential
+parted
+gparted
+net-tools
+ wireless-tools
+wpasupplicant
+blueman

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Enable i386 architecture for gaming compatibility (Steam, Wine, Proton)
+
+set -e
+
+dpkg --add-architecture i386
+apt-get update
+
+echo "OintOS: i386 architecture enabled for gaming support"

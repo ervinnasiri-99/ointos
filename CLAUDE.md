@@ -6,7 +6,7 @@ OintOS is an Ubuntu 26.04 LTS-based Linux distribution with a Windows-native ins
 
 ## Current phase
 
-Phase 2 — Libertix architecture assessment & integration plan (in progress).
+Phase 3 — Ubuntu 26.04 + KDE Plasma prototype build (in progress).
 
 ## Key rules
 
@@ -53,4 +53,7 @@ tests/                     # Unit, integration, VM test harnesses
 - `docs/architecture/001-libertix-assessment.md` — Libertix architecture analysis
 - `docs/decisions/001-kernel-mesa-strategy.md` — Kernel/mesa strategy proposal
 - `docs/decisions/002-libertix-fork-strategy.md` — Fork approach documentation
+- `docs/decisions/003-build-tool-choice.md` — Build tool decision (live-build)
+- `distro-build/build.sh` — Main ISO build script
+- `distro-build/config/` — live-build configuration (package lists, hooks)
 - `LICENSE-NOTES.md` — GPL-3.0 obligations and legal review status
