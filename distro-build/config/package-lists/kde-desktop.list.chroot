@@ -12,7 +12,7 @@ kwin-wayland
 dolphin
 konsole
 kate
-spectacle
+kde-spectacle
 okular
 gwenview
 ark
@@ -29,7 +29,6 @@ powerdevil
 systemsettings
 
 # Theming
-oxygen5
 breeze
 breeze-icon-theme
 breeze-cursor-theme

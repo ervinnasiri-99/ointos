@@ -23,6 +23,7 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime
 
@@ -100,6 +101,12 @@ class Logger:
     def error(self, msg: str) -> None:
         self._emit(COLOR_RED, "ERROR", msg)
 
+    def flush(self) -> None:
+        """Force any buffered log output to disk immediately."""
+        if self.fh:
+            self.fh.flush()
+            os.fsync(self.fh.fileno())
+
     def close(self) -> None:
         if self.fh:
             self.fh.close()
@@ -112,16 +119,30 @@ class Logger:
 
 def run(cmd: list, logger: Logger, cwd: str = None,
         check: bool = True, env: dict = None) -> subprocess.CompletedProcess:
-    """Run a command, streaming output, with optional failure handling."""
+    """Run a command, STREAMING output live to console + log line-by-line.
+
+    Unlike subprocess.run with PIPE (which buffers all output until the
+    process exits — hiding progress and losing logs on a crash), this reads
+    each line as it's produced and forwards it immediately through the
+    logger. The log file is therefore always up to date even if the build
+    is interrupted.
+    """
     display = " ".join(cmd)
     logger.info(f"$ {display}")
+
+    # Buffered atomic log flush: stash the current console state so this file
+    # stays the single source of truth. (Belt-and-braces; see Logger.flush.)
+    logger.flush()
+
+    # Launch with pipes; stderr merged into stdout so we catch everything.
     try:
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
             cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            bufsize=1,          # line-buffered
             env=env,
         )
     except FileNotFoundError as exc:
@@ -130,9 +151,36 @@ def run(cmd: list, logger: Logger, cwd: str = None,
             raise SystemExit(f"Failed to execute: {display}") from exc
         return None
 
-    # Stream the captured output to console + log
-    for line in proc.stdout.splitlines():
-        logger.info(f"    {line}")
+    def _reader(stream):
+        # Read lines as they arrive and log them immediately.
+        try:
+            for raw in stream:
+                line = raw.rstrip("\n")
+                if line:
+                    logger.info(f"    {line}")
+        finally:
+            try:
+                stream.close()
+            except OSError:
+                pass
+
+    reader = threading.Thread(target=_reader, args=(proc.stdout,), daemon=True)
+    reader.start()
+
+    # Wait for the process to finish.
+    try:
+        proc.wait()
+    except KeyboardInterrupt:
+        logger.warn("interrupted — terminating build subprocess")
+        proc.terminate()
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        raise
+
+    # Wait for the reader to drain any remaining buffered lines.
+    reader.join(timeout=5)
 
     if proc.returncode != 0:
         logger.error(f"command exited with code {proc.returncode}: {display}")

@@ -8,6 +8,5 @@ build-essential
 parted
 gparted
 net-tools
- wireless-tools
 wpasupplicant
 blueman
