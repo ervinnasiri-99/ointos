@@ -245,13 +245,19 @@ def build(args, logger: Logger) -> str:
         logger.warn(f"no config directory at {src_config}; using defaults")
 
     # lb config
+    # NOTE: option names follow Ubuntu's live-build 3.0~a57 (verified via
+    # `lb config --help`). Notably: --bootloader (singular, grub|syslinux|
+    # yaboot) — there is no --bootloaders/grub-efi split; and --security/
+    # --updates/--backports are NOT flags in this version — those repos are
+    # configured via the mirror options (--parent-mirror-chroot-*), which
+    # live-build default include for Ubuntu.
     logger.step("Configuring live-build (lb config)")
     lb_config = [
         "lb", "config",
         "--distribution", DISTRO,
         "--architectures", args.arch,
         "--archive-areas", "main restricted universe multiverse",
-        "--bootloaders", "grub-efi,grub-pc",
+        "--bootloader", "grub",
         "--binary-images", "iso-hybrid",
         "--debian-installer", "live",
         "--iso-application", "OintOS",
@@ -259,9 +265,6 @@ def build(args, logger: Logger) -> str:
         "--iso-volume", f"OintOS {args.version}",
         "--apt-indices", "false",
         "--apt-recommends", "false",
-        "--security", "true",
-        "--updates", "true",
-        "--backports", "false",
     ]
     run(lb_config, logger, cwd=build_dir)
 

@@ -85,21 +85,20 @@ jobs:
           mkdir -p /tmp/lbcheck && cd /tmp/lbcheck
           cp -r "$GITHUB_WORKSPACE/distro-build/config/"* .
           # lb binary often lives in /usr/lib/live/build
+          # (--bootloader is singular in live-build 3.0~a57; the security,
+          #  updates, and backports repos come via the Ubuntu mirror defaults)
           lb config \
             --distribution resolute \
             --architectures amd64 \
             --archive-areas "main restricted universe multiverse" \
-            --bootloaders "grub-efi,grub-pc" \
+            --bootloader grub \
             --binary-images iso-hybrid \
             --debian-installer live \
             --iso-application "OintOS" \
             --iso-publisher "OintOS Project" \
             --iso-volume "OintOS 1.0" \
             --apt-indices false \
-            --apt-recommends false \
-            --security true \
-            --updates true \
-            --backports false
+            --apt-recommends false
           echo "OK: lb config accepted the OintOS configuration"
 
   lint-python:

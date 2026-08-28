@@ -48,12 +48,15 @@ echo ">>> Copying configuration..."
 cp -r "$SCRIPT_DIR/config/"* .
 
 # Configure live-build
+# NOTE: option names follow Ubuntu's live-build 3.0~a57 (see build.py for
+# the rationale — --bootloader is singular; --security/--updates/--backports
+# are not flags in this version).
 echo ">>> Configuring live-build..."
 lb config \
     --distribution "$DISTRO" \
     --architectures "$ARCH" \
     --archive-areas "main restricted universe multiverse" \
-    --bootloaders "grub-efi,grub-pc" \
+    --bootloader grub \
     --binary-images iso-hybrid \
     --memtest memtest86+ \
     --debian-installer live \
@@ -61,10 +64,7 @@ lb config \
     --iso-publisher "OintOS Project" \
     --iso-volume "OintOS $VERSION" \
     --apt-indices false \
-    --apt-recommends false \
-    --security true \
-    --updates true \
-    --backports false
+    --apt-recommends false
 
 # Build
 echo ">>> Building ISO (this may take 30-90 minutes)..."
