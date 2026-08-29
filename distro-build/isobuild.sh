@@ -218,9 +218,12 @@ apt-get install -y \
     ca-certificates \
     gnupg
 
-# Default apps / OintOS-sensible choices (Phase 4 will curate further)
+# Default browser: Ubuntu 26.04 ships 'firefox' (the ESR snap name
+# 'firefox-esr' does not exist in archive) — verified against
+# packages.ubuntu.com/resolute via Playwright.
+# Phase 4 will swap this for Brave per the master prompt.
 apt-get install -y \
-    firefox-esr \
+    firefox \
     vim \
     nano \
     htop
