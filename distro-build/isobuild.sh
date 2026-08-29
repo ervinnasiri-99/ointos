@@ -371,8 +371,14 @@ INITRD=$(ls -1 "$MERGED_DIR/boot/initrd.img-"* | tail -n 1)
 echo ">>> Using kernel: $VMLINUZ"
 echo ">>> Using initrd: $INITRD"
 
-# Clean the live layer of mount points before squashfs
+# Clean the live layer of the *bind-mounted* host dirs before squashfs.
+# IMPORTANT: then recreate them as EMPTY dirs. casper's casper-bottom mounts
+# /proc, /sys, /dev into the live root during boot; if they don't exist in
+# the squashfs, it fails ("mount: mounting /proc on /root/proc failed: No
+# such file or directory") and init panics. They must exist as empty mount
+# points so casper can mount over them.
 rm -rf "$MERGED_DIR/dev" "$MERGED_DIR/proc" "$MERGED_DIR/sys" "$MERGED_DIR/run" 2>/dev/null || true
+mkdir -p "$MERGED_DIR/dev" "$MERGED_DIR/proc" "$MERGED_DIR/sys" "$MERGED_DIR/run"
 
 ISODIR="$WORK_DIR/custom-iso"
 rm -rf "$ISODIR" && mkdir -p "$ISODIR/casper"
