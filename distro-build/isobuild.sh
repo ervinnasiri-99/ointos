@@ -133,8 +133,21 @@ apt-get install -y --no-install-recommends \
 CHROOT_DIR="$WORK_DIR/chroot"
 if [ -d "$CHROOT_DIR" ]; then
     echo ">>> Cleaning previous chroot..."
-    chroot "$CHROOT_DIR" /bin/umount -f /run /sys /proc /dev/pts /dev 2>/dev/null || true
-    rm -rf "$CHROOT_DIR"
+    # Unmount anything still mounted under the chroot, FROM THE HOST (a
+    # chroot-internal umount can't release host bind mounts like
+    # /run/credentials/* or /run/snapd/ns/*). Loop until nothing matches.
+    for _ in $(seq 1 20); do
+        # Locate the deepest host mount whose mountpoint is under CHROOT_DIR.
+        mp=$(awk -v c="$CHROOT_DIR/" 'index($2, c) == 1 { if (length($0)>max){max=length($0); best=$2} } END{print best}' /proc/self/mounts)
+        [ -z "$mp" ] && break
+        echo "    unmounting: $mp"
+        umount "$mp" 2>/dev/null || umount -l "$mp" 2>/dev/null || true
+    done
+    # Now it should be safe to remove.
+    rm -rf "$CHROOT_DIR" 2>/dev/null || { sleep 2; rm -rf "$CHROOT_DIR" 2>/dev/null; }
+    if [ -d "$CHROOT_DIR" ]; then
+        echo "WARNING: could not fully remove $CHROOT_DIR (some mounts busy) — continuing"
+    fi
 fi
 mkdir -p "$CHROOT_DIR"
 
@@ -276,6 +289,16 @@ wrapup_chroot "$CHROOT_DIR"
 # ---------------------------------------------------------------------------
 MERGED_DIR="$WORK_DIR/merged"
 mkdir -p "$WORK_DIR/live-upper" "$WORK_DIR/live-work" "$MERGED_DIR"
+
+# If a previous run failed after mounting the overlay, unmount host-side so
+# the fresh overlay mount below won't fail (EBUSY).
+for _ in $(seq 1 10); do
+    mp=$(awk -v c="$MERGED_DIR/" 'index($2, c) == 1 { if (length($0)>max){max=length($0); best=$2} } END{print best}' /proc/self/mounts)
+    [ -z "$mp" ] && break
+    echo "    unmounting stale: $mp"
+    umount "$mp" 2>/dev/null || umount -l "$mp" 2>/dev/null || true
+done
+
 mount -t overlay overlay \
     -o lowerdir="$CHROOT_DIR",upperdir="$WORK_DIR/live-upper",workdir="$WORK_DIR/live-work" \
     "$MERGED_DIR"
