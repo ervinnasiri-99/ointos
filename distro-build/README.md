@@ -72,6 +72,26 @@ Test checklist:
 6. **Manual GRUB**: write `boot/grub/grub.cfg`, copy official modules (`x86_64-efi`, `i386-pc`), fonts, `EFI/boot/{bootx64.efi,grubx64.efi,mmx64.efi}` (shim + signed grub)
 7. Build EFI partition image; `xorriso` → **hybrid ISO** (BIOS grub-mbr + EFI appended partition)
 
+## ⚠️ CRITICAL: casper-uuid-generic (boot-failure gotcha)
+
+casper's initramfs will **reject a perfectly good live medium** with *"Unable
+to find a medium containing a live file system"* if the ISO root `.disk/`
+has no `casper-uuid-*` file matching the initrd's generated UUID.
+
+- casper generates a UUID into the initrd (`conf/uuid.conf`, via
+  `CASPER_GENERATE_UUID`).
+- `check_dev()` mounts the ISO, finds `/casper/*.squashfs` (passes), then
+  `matches_uuid()` requires `.disk/casper-uuid-*` to contain the matching UUID.
+- Without it → the medium is rejected → the boot prompt above.
+
+`isobuild.sh` handles this by extracting the UUID from the initrd
+(`unmkinitramfs` → `conf/uuid.conf`) and writing
+`$ISODIR/.disk/casper-uuid-generic`. **Do not remove that step.**
+
+(Symptom was diagnosed via a QEMU `break=premount` initramfs `sh -x` trace:
+`find_livefs` → `is_casper_path` returned 0, then the UUID gate rejected the
+device. `install-sources.yaml` is NOT what casper uses to find the medium.)
+
 ---
 
 ## Current Status / Roadmap
