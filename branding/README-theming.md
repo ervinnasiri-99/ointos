@@ -121,7 +121,7 @@ This document banks **every** branding/theming question so that when we reach th
 | Item | Proposed default |
 |---|---|
 | Mode | Light + dark both, **auto** default, toggle in OOBE |
-| Primary color | Follow your orange-red logo (get exact hex) |
+| Primary color | **Vivid Orchid `#bb42bc`** (official palette — see `colors.md`) |
 | Plasma theme | Custom "OintOS" Look-and-Feel **based on Breeze** |
 | Icons / Cursor | Breeze + Breeze cursor (optionally custom cursor later) |
 | Fonts | Noto Sans / Noto Sans Mono (Ubuntu stock), tuned sizes |
