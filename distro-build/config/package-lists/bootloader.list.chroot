@@ -1,0 +1,17 @@
+# OintOS Bootloader Packages
+#
+# Workaround for Ubuntu live-build Bug 2154055: lb_binary_grub tries to
+# install the obsolete 'grub-legacy' package, which no longer exists in
+# Ubuntu 26.04 ("Package 'grub-legacy' has no installation candidate").
+#
+# Pre-installing the correct modern GRUB packages into the chroot lets
+# live-build's grub binary step succeed instead of reaching for grub-legacy.
+# (Chroot hooks run during the chroot stage, so these are present before
+# lb_binary_grub runs in the binary stage.)
+
+grub2-common
+grub-common
+grub-pc
+grub-pc-bin
+grub-efi-amd64
+grub-efi-amd64-bin
