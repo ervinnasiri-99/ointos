@@ -29,6 +29,22 @@ ARCH="amd64"
 WORK_DIR="${OINTOS_WORK_DIR:-/opt/ointos-build}"
 ISO_NAME="OintOS-${OINTOS_VERSION}-${ARCH}"
 
+# ---------------------------------------------------------------------------
+# Guaranteed cleanup: whatever happens (error, Ctrl+C, success), release every
+# mount under WORK_DIR from the HOST side. This is what keeps the build from
+# leaving stale mounts that can corrupt a WSL2 host's systemd/devfs on the next
+# wsl --shutdown. Runs on EXIT (also covers ERR because of set -e).
+# ---------------------------------------------------------------------------
+cleanup_mounts() {
+    for _ in $(seq 1 20); do
+        mp=$(awk -v c="$WORK_DIR/" 'index($2, c) == 1 { if (length($0)>max){max=length($0); best=$2} } END{print best}' /proc/self/mounts)
+        [ -z "$mp" ] && break
+        echo "   [cleanup] unmounting: $mp"
+        umount "$mp" 2>/dev/null || umount -l "$mp" 2>/dev/null || true
+    done
+}
+trap cleanup_mounts EXIT
+
 # KDE Plasma desktop + OintOS tooling (APT-first; no snaps in v1)
 PACKAGES_DESKTOP="
 kde-plasma-desktop
