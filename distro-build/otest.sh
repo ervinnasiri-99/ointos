@@ -56,7 +56,7 @@ pause
 # ---------------------------------------------------------------------------
 header "3. Display / GPU (VirtualBox/other)"
 inxi -Gzx 2>/dev/null | head -15 || { echo "  (inxi missing)"; ls /dev/dri 2>/dev/null || echo "  no /dev/dri"; }
-echo "  XDG_SESSION_TYPE=$XDG_SESSION_TYPE  DISPLAY=$DISPLAY  WAYLAND=$WAYLAND_DISPLAY"
+echo "  XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-unset}  DISPLAY=${DISPLAY:-unset}  WAYLAND=${WAYLAND_DISPLAY:-unset}"
 pause
 
 # ---------------------------------------------------------------------------
