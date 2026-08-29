@@ -290,6 +290,34 @@ echo "ointos" > /etc/hostname
 useradd -m -s /bin/bash -G sudo oinstaller 2>/dev/null || true
 echo "oinstaller:ointos" | chpasswd
 
+# ---------------------------------------------------------------------------
+# Branding (Phase 3 placeholder — full pass is Phase 14).
+# The repo is mounted at /workspace in the build container, so we can pull
+# the real assets from /workspace/branding/. Wallpaper + logo are applied so
+# the live desktop + boot look like OintOS, not stock Ubuntu.
+# ---------------------------------------------------------------------------
+if [ -d /workspace/branding ] && ls /workspace/branding/*.png >/dev/null 2>&1; then
+    echo "OintOS: applying branding"
+    # Wallpaper: KDE Plasma reads ~/.config + /usr/share/wallpapers, but the
+    # simplest robust path is the backgrounds dir + setting it via kdeglobals.
+    mkdir -p /usr/share/wallpapers/OintOS
+    cp /workspace/branding/OintOSWallpaper.png /usr/share/wallpapers/OintOS/OintOSWallpaper.png 2>/dev/null || true
+    cp /workspace/branding/OintOSWallpaper.png /usr/share/backgrounds/ointos.png 2>/dev/null || true
+
+    # Logo: SDDM + Plasma branding
+    mkdir -p /usr/share/sddm/themes/breeze 2>/dev/null || true
+    cp /workspace/branding/Oint.png /usr/share/icons/ointos-logo.png 2>/dev/null || true
+    cp "/workspace/branding/Oint(Transparent).png" /usr/share/icons/ointos-logo-transparent.png 2>/dev/null || true
+
+    # Set the wallpaper as the default Plasma wallpaper for all users
+    mkdir -p /etc/skel/.config
+    mkdir -p /etc/skel/.local/share/plasma-wallpapers 2>/dev/null || true
+    cat > /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc <<'PLASMA_EOF'
+[Wallpaper]
+image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
+PLASMA_EOF
+fi
+
 
 # Zero telemetry (per master prompt — by architecture, not default)
 systemctl disable apport.service 2>/dev/null || true
