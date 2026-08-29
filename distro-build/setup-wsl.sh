@@ -73,23 +73,28 @@ done
 echo ">>> Updating package lists..."
 sudo apt-get update
 
-echo ">>> Installing live-build prerequisites..."
+echo ">>> Installing OintOS build prerequisites..."
 # Remove stale apt locks if any remain
 sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock 2>/dev/null || true
 sudo dpkg --configure -a 2>/dev/null || true
 
+# NOTE: these match what isobuild.sh needs. isobuild.sh also installs tools
+# itself (idempotent), but keeping them here gives an up-front check.
 sudo apt-get install -y \
-    live-build \
     debootstrap \
-    squashfs-tools \
-    xorriso \
-    genisoimage \
+    dosfstools \
+    grub-common \
     grub-efi-amd64-bin \
     grub-pc-bin \
+    initramfs-tools-core \
     mtools \
-    dosfstools \
+    squashfs-tools \
+    syslinux-utils \
+    tree \
+    ubuntu-keyring \
+    xorriso \
     git \
-    python3 \
+    cpio \
     qemu-utils \
     ovmf
 
@@ -155,6 +160,6 @@ echo ""
 echo "Next step — build the ISO:"
 echo ""
 echo "    cd ~/ointos/distro-build"
-echo "    sudo python3 build.py"
+echo "    sudo bash isobuild.sh"
 echo ""
 echo "(Full verbose log written to output/build-<timestamp>.log)"

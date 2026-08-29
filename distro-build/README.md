@@ -1,127 +1,83 @@
 # OintOS Distro Build
 
-This directory contains the live-build configuration for building the OintOS ISO
-(Ubuntu 26.04 LTS + KDE Plasma).
+Builds the OintOS ISO (Ubuntu 26.04 LTS + KDE Plasma) as a bootable **casper
+live ISO** — using a **manual `debootstrap` + casper + custom-GRUB pipeline**,
+NOT live-build.
 
-## Two build scripts
-
-- **`build.py`** (recommended) — Python build script with full verbose logging
-  to both console and a timestamped log file. Streaming subprocess output,
-  disk/RAM checks, ISO verification, and automatic SHA-256 generation.
-- **`build.sh`** — simple Bash wrapper (simpler, less logging).
-- **`setup-wsl.sh`** — one-time setup helper for WSL2 Ubuntu (installs
-  prerequisites, verifies tools, guides `.wslconfig` memory bump).
+> **Why not live-build?** Ubuntu 26.04's live-build is broken for custom ISOs
+> (Ubuntu Bug 2154055): `--bootloader grub` wants the removed `grub-legacy`
+> package, and even the default `syslinux` wants packages from Ubuntu 11.10.
+> We build by hand, modeled on Ubuntu's own `livecd-rootfs` and the proven
+> recipe in [Utile-OS](https://github.com/Proman4713/Utile-OS) (which has a
+> passing Ubuntu 26.04 ISO build on GitHub Actions). See
+> `docs/decisions/004-build-pipeline-casper.md`.
 
 ---
 
-## Building inside WSL2 Ubuntu (recommended)
+## One-time build-machine setup
 
-This is the fastest path on the Windows/Ryzen machine.
-
-### 1. One-time WSL2 setup
+On your WSL2 Ubuntu (or any root-capable Ubuntu 26.04 — e.g. a
+`docker run -it ubuntu:26.04` container):
 
 ```bash
-cd ~                              # or your repo location (e.g. /mnt/d/OintOS/ointos)
+cd ~
 git clone https://github.com/ervinnasiri-99/ointos.git
 cd ointos/distro-build
-./setup-wsl.sh
+./setup-wsl.sh           # installs the build tools
 ```
 
-The setup script installs live-build + all prerequisites and helps you configure
-WSL2 memory via `.wslconfig` (recommend `memory=8GB`).
-
-> **Location note:** the Linux filesystem (`~/ointos`) is fastest. Building from
-> a Windows drive like `/mnt/d/...` works but is slower. If WSL2's own virtual
-> disk sits on a space-constrained C:, a D: drive with room is a sensible choice —
-> the build chroot needs ~25 GB. The setup script will warn but let you continue.
-
-### 2. Build the ISO
+## Build the ISO
 
 ```bash
-cd ~/ointos/distro-build
-sudo python3 build.py
+sudo bash isobuild.sh
 ```
 
-- Takes **30–90 minutes** depending on hardware/network.
-- Needs **~25 GB free disk** and **~8 GB RAM** peak.
-- Writes a **full verbose log** to `output/build-<timestamp>.log` that mirrors
-  everything to the console.
-- Produces `output/OintOS-1.0-amd64-<date>.iso` + `.sha256`.
+Takes roughly **30–90 minutes** (debootstrap + apt install of KDE + squashfs).
+Needs **~25 GB free** and **~8 GB RAM**.
 
-### 3. Test the ISO in a VM
+Output in `distro-build/output/`:
+- `OintOS-1.0-amd64.iso` — the bootable hybrid (BIOS+EFI) casper live ISO
+- `OintOS-1.0-amd64.iso.sha256`
+
+### Env vars
+- `OINTOS_VERSION=1.0` — image version
+- `OINTOS_WORK_DIR=/opt/ointos-build` — build scratch dir (def: `/opt/ointos-build`)
+
+---
+
+## Test the ISO in a VM
 
 ```bash
-qemu-system-x86_64 -cdrom output/OintOS-1.0-amd64-*.iso \
-    -m 4096 -enable-kvm -smp 2
+qemu-system-x86_64 -cdrom output/OintOS-1.0-amd64.iso -m 4096 -enable-kvm -smp 2
 ```
 
----
-
-## Building on native Ubuntu (bare metal)
-
-```bash
-cd distro-build
-sudo ./build.sh          # or: sudo python3 build.py
-```
-
-Requires the same prerequisites; `build.py` installs them automatically unless
-you pass `--no-prereqs`.
-
----
-
-## Build disk/RAM requirements
-
-| Resource | Required | Recommended |
-|----------|----------|-------------|
-| Disk space | 25 GB free | 30 GB+ |
-| RAM | 4 GB | 8 GB |
-| Build time | — | 30–90 min |
-
----
-
-## Output
-
-Output files are in `distro-build/output/`:
-- `OintOS-1.0-amd64-YYYYMMDD.iso` — The bootable ISO
-- `OintOS-1.0-amd64-YYYYMMDD.iso.sha256` — SHA-256 checksum
-- `build-YYYYMMDD-HHMMSS.log` — Full verbose build log
-
----
-
-## Test checklist (in the VM)
-
-- [ ] ISO boots to live environment
+Test checklist:
+- [ ] ISO boots to casper live session
+- [ ] GRUB menu shows "Try OintOS"
 - [ ] KDE Plasma desktop loads
-- [ ] SDDM login screen appears
-- [ ] NetworkManager detects network
-- [ ] Dolphin file manager works
-- [ ] Konsole terminal works
-- [ ] Brave Browser launches
-- [ ] System settings accessible
+- [ ] SDDM / console login works (`oinstaller` / password `ointos`)
+- [ ] Network works
+- [ ] Dolphin, Konsole, Brave launch
+- [ ] Btrfs tools present
 
 ---
 
-## Package Lists
+## How it works (`isobuild.sh`)
 
-Package lists are in `config/package-lists/`:
-- `base.list.chroot` — Core Ubuntu base system
-- `kde-desktop.list.chroot` — KDE Plasma desktop (curated)
-- `gaming.list.chroot` — Steam, Wine (placeholder — Phase 9)
-- `btrfs-tools.list.chroot` — Btrfs utilities
-- `system-tools.list.chroot` — System utilities
-
-## Build Hooks
-
-Hooks in `config/hooks/live/` run during the build:
-- `0000-add-brave-repo.chroot` — Installs Brave Browser
-- `0100-enable-i386.chroot` — Enables i386 for gaming
-- `0200-kde-defaults.chroot` — Configures KDE defaults
-- `0300-remove-telemetry.chroot` — Removes telemetry
-- `0400-system-tweaks.chroot` — System configuration
+1. **debootstrap** `resolute` base → chroot
+2. Install **KDE Plasma + OintOS packages** into chroot (`linux-generic` kernel, casper, btrfs-progs, timeshift, etc.), set `os-release` = OintOS, **disable telemetry** (apport/whoopsie), create `oinstaller` user
+3. Create an **overlay live layer**, install `casper`, regenerate initramfs with casper layer support
+4. Copy `vmlinuz`/`initrd` → `ISO/casper/`, `mksquashfs` → `filesystem.squashfs`
+5. Casper metadata (`filesystem.size`, `install-sources.yaml`, `.disk/`)
+6. **Manual GRUB**: write `boot/grub/grub.cfg`, copy official modules (`x86_64-efi`, `i386-pc`), fonts, `EFI/boot/{bootx64.efi,grubx64.efi,mmx64.efi}` (shim + signed grub)
+7. Build EFI partition image; `xorriso` → **hybrid ISO** (BIOS grub-mbr + EFI appended partition)
 
 ---
 
-## Current Status
+## Current Status / Roadmap
 
-This is a **prototype** ISO — a live environment only, no installer yet.
-The installer will be added in Phase 6 (Linux-side) and Phase 7 (Windows-side).
+- Phase 3: prototype **live** ISO (KDE + casper, no installer yet) — this script.
+- Gaming stack (Steam/Proton/Wine), installer, Btrfs *installed* system, OOBE →
+  later phases (see `docs/master-prompt.md`). The live ISO already includes
+  `btrfs-progs` + `timeshift` for the live environment.
+- Branding is placeholder (`OintOS 1.0`); Phase 14 handles real branding.

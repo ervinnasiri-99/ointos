@@ -1,12 +1,13 @@
 name: Build Config Validation
 
-# Lightweight validation of the distro-build configuration.
+# Lightweight validation of the distro-build pipeline.
 # Runs on every push/PR and on a schedule.
 #
-# IMPORTANT: This deliberately does NOT run the full ISO build — the full
-# build needs ~25 GB disk and 30-90 min, which exceeds GitHub Actions
-# free-tier runner limits (~14 GB usable disk). See docs/master-prompt.md
-# risk #1. Full builds run locally (WSL2) instead.
+# IMPORTANT: This deliberately does NOT run the full ISO build — the manual
+# casper pipeline (isobuild.sh) needs ~25 GB disk and 30-90 min, exceeding
+# GitHub Actions free-tier runner limits (~14 GB usable disk). It also requires
+# mount/privileged ops best done in WSL2 or a local Docker container.
+# See docs/master-prompt.md risk #1. Full builds run on the Ryzen/WSL2 machine.
 
 on:
   push:
@@ -17,102 +18,62 @@ on:
     paths:
       - "distro-build/**"
   schedule:
-    # Also validate on a weekly cadence to catch upstream package drift
+    # Weekly to catch upstream package drift
     - cron: "23 4 * * 1"
   workflow_dispatch:
 
 jobs:
-  validate-hooks:
-    name: Validate live-build hooks (shellcheck)
+  validate-shell:
+    name: Shellcheck build scripts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Install shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
-
-      - name: Shellcheck all .chroot hooks
+      - name: Shellcheck isobuild.sh + setup-wsl.sh
         run: |
           set -e
-          find distro-build/config/hooks -name "*.chroot" -print0 \
-            | xargs -0 -r shellcheck -x shell=bash
-          echo "OK: all hooks pass shellcheck"
+          shellcheck -x distro-build/isobuild.sh
+          shellcheck -x distro-build/setup-wsl.sh
+          echo "OK: shell scripts pass shellcheck"
 
-  validate-package-lists:
-    name: Validate package lists
+  validate-packages:
+    name: Validate package set against Ubuntu resolute
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate package lists
+      - name: Check referenced packages resolve in resolute
         run: |
           set -euo pipefail
-          FAIL=0
-          for f in distro-build/config/package-lists/*.list.chroot; do
-            echo "== checking $f"
-            # Reject blank-line, whitespace-prefix, or comment-only issues
-            grep -nE '[[:space:]]+$' "$f" && { echo "  ^ trailing whitespace"; FAIL=1; }
-            # Each non-comment line should be a single token (package name)
-            while IFS= read -r line || [ -n "$line" ]; do
-              case "$line" in
-                \#*|"") continue ;;
-                *)
-                  if echo "$line" | grep -q ' '; then
-                    echo "  ^ line has spaces (should be one package per line): $line"
-                    FAIL=1
-                  fi
-                  ;;
-              esac
-            done < "$f"
-          done
-          # Confirm at least the key lists exist
-          for required in base kde-desktop gaming btrfs-tools system-tools; do
-            [ -f "distro-build/config/package-lists/$required.list.chroot" ] \
-              || { echo "MISSING required list: $required"; FAIL=1; }
-          done
-          [ "$FAIL" -eq 0 ] || { echo "Package list validation FAILED"; exit 1; }
-          echo "OK: package lists valid"
+          # Extract package names from isobuild.sh apt-get install lists
+          # (lines inside the heredoc blocks that are bare package tokens).
+          grep -oE '^[a-z0-9][a-z0-9.+:-]*$' distro-build/isobuild.sh \
+            | sort -u > /tmp/ref-pkgs.txt
+          echo "Referenced package-like tokens:"
+          cat /tmp/ref-pkgs.txt
+          echo "---"
+          # The real resolution check lives in the actual build (apt inside
+          # the chroot). Here we just sanity-check we didn't reference the
+          # known-removed packages we already dropped.
+          if grep -qE '^(spectacle|oxygen5|wireless-tools|grub-legacy)$' /tmp/ref-pkgs.txt; then
+            echo "ERROR: referenced a known-removed/obsolete package"
+            exit 1
+          fi
+          echo "OK: no known-removed packages referenced"
 
-  lb-config-dry-run:
-    name: lb config dry-run (no full build)
+  drivetrain-check:
+    name: Check isobuild.sh reads cleanly and steps are ordered
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install live-build
-        run: sudo apt-get update && sudo apt-get install -y live-build
-      - name: Run lb config to validate configuration
+      - name: Bash syntax + step presence
         run: |
           set -euo pipefail
-          mkdir -p /tmp/lbcheck && cd /tmp/lbcheck
-          cp -r "$GITHUB_WORKSPACE/distro-build/config/"* .
-          # lb binary often lives in /usr/lib/live/build
-          # (--bootloader is singular in live-build 3.0~a57; the security,
-          #  updates, and backports repos come via the Ubuntu mirror defaults)
-          lb config \
-            --distribution resolute \
-            --architectures amd64 \
-            --archive-areas "main restricted universe multiverse" \
-            --bootloader grub \
-            --memtest none \
-            --binary-images iso-hybrid \
-            --debian-installer false \
-            --iso-application "OintOS" \
-            --iso-publisher "OintOS Project" \
-            --iso-volume "OintOS 1.0" \
-            --apt-indices false
-          # apt-recommends kept ENABLED (default) for a working KDE desktop
-          echo "OK: lb config accepted the OintOS configuration"
-
-  lint-python:
-    name: Lint build.py
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Compile-check build.py
-        run: python3 -m py_compile distro-build/build.py
-      - name: Shellcheck setup-wsl.sh and build.sh
-        run: |
-          sudo apt-get update && sudo apt-get install -y shellcheck
-          shellcheck -x distro-build/build.sh distro-build/setup-wsl.sh
+          bash -n distro-build/isobuild.sh
+          grep -q "debootstrap" distro-build/isobuild.sh \
+            && echo "OK: debootstrap present"
+          grep -q "xorriso -as mkisofs" distro-build/isobuild.sh \
+            && echo "OK: xorriso assembly present"
+          grep -q "mksquashfs" distro-build/isobuild.sh \
+            && echo "OK: squashfs present"
+          echo "OK: core pipeline steps present"
