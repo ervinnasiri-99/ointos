@@ -290,6 +290,7 @@ echo "ointos" > /etc/hostname
 useradd -m -s /bin/bash -G sudo oinstaller 2>/dev/null || true
 echo "oinstaller:ointos" | chpasswd
 
+
 # Zero telemetry (per master prompt — by architecture, not default)
 systemctl disable apport.service 2>/dev/null || true
 systemctl disable whoopsie.service 2>/dev/null || true
@@ -303,16 +304,53 @@ rm -f /etc/update-motd.d/50-motd-news 2>/dev/null || true
 echo "OintOS: telemetry disabled by architecture"
 
 # ---------------------------------------------------------------------------
+# casper live autologin: defaults to user 'ubuntu', which doesn't exist here.
+# Point casper at our live user so SDDM auto-logs-in (fixes the journal error
+# 'sddm-helper: could not identify user ubuntu').
+# ---------------------------------------------------------------------------
+cat > /etc/casper.conf <<'CASPER_EOF'
+USERNAME="oinstaller"
+CASPER_FORCE_UNTRUSTED=1
+HOMEONLY=no
+SYSTEM_MOUNTPOINTS=proc,sys,dev,run
+HOSTNAME=ointos
+CASPER_GENERATE_UUID=1
+CASPER_LOG_LEVEL=info
+CASPER_FALLBACK_TIME=10
+CASPER_MEDIA_REQUIRED=0
+CASPER_LIVE_MEDIA_PATH=casper
+CASPER_EOF
+
+mkdir -p /etc/sddm.conf.d/
+cat > /etc/sddm.conf.d/autologin.conf <<'SDDM_EOF'
+[Autologin]
+User=oinstaller
+Session=plasma
+SDDM_EOF
+
+# ---------------------------------------------------------------------------
 # NO SNAPS. OintOS is APT-first (master prompt). Purge snapd entirely —
 # it gets pulled in by ubuntu-standard/meta packages and we don't want it.
 # (Verified in the VM: snapd was present; the whole point is a snap-free OintOS.)
 # ---------------------------------------------------------------------------
-echo "OintOS: purging snapd (APT-first policy)"
+echo "OintOS: purging snapd (APT-first policy) + BLOCKING reinstall"
 apt-get purge -y snapd 2>/dev/null || true
 # Remove the snap-transition 'firefox' stub (it's a mozilla-firefox snap shim;
 # with snapd gone it leaves a broken /usr/bin/firefox). Brave is our browser.
 apt-get purge -y firefox 2>/dev/null || true
 rm -rf /var/cache/snapd /snap ~/snap /root/snap /var/snap 2>/dev/null || true
+
+# HARD BLOCK: apt pin snapd to -1 so it can NEVER be installed again,
+# even as a Recommends of ubuntu-standard etc. (This is why a plain purge
+# wasn't enough — ubuntu-standard re-added it.)
+mkdir -p /etc/apt/preferences.d
+cat > /etc/apt/preferences.d/never-snap <<'PINEOF'
+Package: snapd
+Pin: release *
+Pin-Priority: -1
+PINEOF
+apt-get mark hold snapd 2>/dev/null || true  # belt-and-suspenders
+
 apt-get autoremove -y --purge 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
