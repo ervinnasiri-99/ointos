@@ -88,7 +88,14 @@ gnupg
 # ---------------------------------------------------------------------------
 
 setup_chroot() {
-    # Mount host dirs into the chroot so apt/initramfs work
+    # Mount host dirs into the chroot so apt/initramfs work.
+    # mkdir -p: after an overlay mount, /dev, /proc, /sys, /run may not exist
+    # as visible dirs in the merged view (e.g. if the base chroot lacks them
+    # or the lowerdir was stripped) — bind-mounting onto a missing target
+    # fails ("mount point does not exist").
+    for d in dev dev/pts proc sys run; do
+        mkdir -p "$1/$d"
+    done
     mount --bind /dev "$1/dev"
     mount --bind /dev/pts "$1/dev/pts"
     mount -t proc /proc "$1/proc"
