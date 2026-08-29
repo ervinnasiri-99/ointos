@@ -375,22 +375,32 @@ cp "$INITRD"  "$ISODIR/casper/initrd"
 # Single merged squashfs (standard casper live layout)
 mksquashfs "$MERGED_DIR" "$ISODIR/casper/filesystem.squashfs" -comp xz -noappend
 
-# Casper metadata
+# Casper metadata.
+# CRITICAL: install-sources.yaml must be the YAML-*list* format that Ubuntu's
+# subiquity/casper tooling parses (each source is "- ..."), NOT a top-level
+# kernel:/sources: map — a malformed file was implicated in casper failing to
+# resolve the squashfs. Format verified against AskUbuntu "Minimal Ubuntu
+# Install" (livecd-rootfs generated live ISOs).
 FILESYSTEM_SIZE=$(du -sx --block-size=1 "$MERGED_DIR" | cut -f1)
 printf '%s' "$FILESYSTEM_SIZE" > "$ISODIR/casper/filesystem.size"
-echo "kernel:
-  linux: linux-generic
-sources:
-- description:
+
+# filesystem.manifest (what casper/live detection reads to know it's a live CD)
+chroot "$MERGED_DIR" dpkg-query -W --showformat='${Package} ${Version}\n' \
+    | sort > "$ISODIR/casper/filesystem.manifest"
+
+cat > "$ISODIR/casper/install-sources.yaml" <<YAML_EOF
+- default: true
+  description:
     en: OintOS (KDE Plasma)
   id: ointos-desktop
+  locale_support: langpack
   name:
     en: Standard
   path: filesystem.squashfs
   size: $FILESYSTEM_SIZE
   type: fsimage
   variant: desktop
-version: 2" > "$ISODIR/casper/install-sources.yaml"
+YAML_EOF
 
 # ---------------------------------------------------------------------------
 # 5. .disk/, ubuntu symlink, grub overlay, EFI
