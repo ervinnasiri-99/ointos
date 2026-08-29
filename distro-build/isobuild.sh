@@ -150,6 +150,20 @@ debootstrap \
 
 setup_chroot "$CHROOT_DIR"
 
+# Write the OintOS identity directly into the chroot (host-side: $OINTOS_VERSION
+# expands here; it is NOT passed into the chroot). Placeholder branding — Phase 14.
+cat > "$CHROOT_DIR/etc/os-release" <<OS_RELEASE_EOF
+PRETTY_NAME="OintOS ${OINTOS_VERSION}"
+NAME="OintOS"
+VERSION_ID="${OINTOS_VERSION}"
+VERSION="${OINTOS_VERSION} (Resolute Raccoon)"
+VERSION_CODENAME=resolute
+ID=ointos
+ID_LIKE=ubuntu
+HOME_URL="https://github.com/ervinnasiri-99/ointos"
+BUG_REPORT_URL="https://github.com/ervinnasiri-99/ointos/issues"
+OS_RELEASE_EOF
+
 # ---------------------------------------------------------------------------
 # 2. Install OintOS packages into the base chroot
 # ---------------------------------------------------------------------------
@@ -158,10 +172,8 @@ cat > "$CHROOT_DIR/opt/install-base.sh" <<'OINTOS_EOF'
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-# Host-side version, passed into the chroot via env when we chroot
-# (see the chroot invocation). ${VAR:-default} keeps it robust.
-OINTOS_VERSION="${OINTOS_VERSION:-1.0}"
-export OINTOS_VERSION
+# The version is baked into /etc/os-release by the host script before this
+# runs (util-linux chroot has no env-inheritance flag). Nothing to set here.
 
 # Default repos already point at resolute via debootstrap; enable all areas
 cat > /etc/apt/sources.list <<SOURCES_EOF
@@ -236,20 +248,6 @@ echo "ointos" > /etc/hostname
 useradd -m -s /bin/bash -G sudo oinstaller 2>/dev/null || true
 echo "oinstaller:ointos" | chpasswd
 
-# OintOS identity (placeholder branding — Phase 14).
-# OINTOS_VERSION is exported and passed via `chroot -e` below.
-cat > /etc/os-release <<OS_RELEASE_EOF
-PRETTY_NAME="OintOS ${OINTOS_VERSION}"
-NAME="OintOS"
-VERSION_ID="${OINTOS_VERSION}"
-VERSION="${OINTOS_VERSION} (Resolute Raccoon)"
-VERSION_CODENAME=resolute
-ID=ointos
-ID_LIKE=ubuntu
-HOME_URL="https://github.com/ervinnasiri-99/ointos"
-BUG_REPORT_URL="https://github.com/ervinnasiri-99/ointos/issues"
-OS_RELEASE_EOF
-
 # Zero telemetry (per master prompt — by architecture, not default)
 systemctl disable apport.service 2>/dev/null || true
 systemctl disable whoopsie.service 2>/dev/null || true
@@ -268,7 +266,7 @@ rm -rf /var/lib/apt/lists/*
 OINTOS_EOF
 
 chmod +x "$CHROOT_DIR/opt/install-base.sh"
-chroot -e "$CHROOT_DIR" /bin/bash -lc "/opt/install-base.sh"
+chroot "$CHROOT_DIR" /bin/bash -lc "/opt/install-base.sh"
 rm -f "$CHROOT_DIR/opt/install-base.sh"
 
 wrapup_chroot "$CHROOT_DIR"
@@ -314,7 +312,7 @@ update-initramfs -c -k all
 OINTOS_EOF
 
 chmod +x "$MERGED_DIR/opt/live-setup.sh"
-chroot -e "$MERGED_DIR" /bin/bash -lc "/opt/live-setup.sh"
+chroot "$MERGED_DIR" /bin/bash -lc "/opt/live-setup.sh"
 rm -f "$MERGED_DIR/opt/live-setup.sh"
 
 wrapup_chroot "$MERGED_DIR"
