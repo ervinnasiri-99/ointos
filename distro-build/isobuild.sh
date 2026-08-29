@@ -410,6 +410,33 @@ ln -s . "$ISODIR/ubuntu"
 touch "$ISODIR/.disk/base_installable"
 echo "full_cd/single" > "$ISODIR/.disk/cd_type"
 
+# ****************************************************************************
+# CRITICAL: .disk/casper-uuid-generic
+#   casper's check_dev() mounts the ISO, finds /casper/*.squashfs (is_casper_path
+#   PASSES), then REQUIRES the device's UUID to match the initrd's generated
+#   UUID ($UUID from conf/uuid.conf) via matches_uuid(). That looks for a file
+#   named .disk/casper-uuid-* in the ISO root. WITHOUT it, casper rejects the
+#   medium: "Unable to find a medium containing a live file system".
+#
+#   Verified in a QEMU initramfs trace (find_livefs): is_casper_path=0, then
+#   UUID gate fails because the ISO has no .disk/casper-uuid-generic. This was
+#   the root cause of our boot failure (not install-sources.yaml).
+#
+#   Extract the UUID from the initrd and write it to the ISO, exactly as
+#   Utile-OS/livecd-rootfs do.
+# ****************************************************************************
+INITRD_DIR="$WORK_DIR/extracted-initrd"
+rm -rf "$INITRD_DIR" && mkdir -p "$INITRD_DIR"
+unmkinitramfs "$ISODIR/casper/initrd" "$INITRD_DIR"
+UUID_CONF=$(find "$INITRD_DIR" -type f \( -path "*/conf/uuid.conf" -o -name "uuid.conf" \) | head -n 1)
+if [ -n "$UUID_CONF" ]; then
+    echo "extracted initrd UUID from $UUID_CONF"
+    mv "$UUID_CONF" "$ISODIR/.disk/casper-uuid-generic"
+else
+    echo "WARNING: uuid.conf not found in initrd — casper UUID check may fail"
+fi
+rm -rf "$INITRD_DIR"
+
 # Write the GRUB config (casper live entries) — manual, avoids live-build bug
 mkdir -p "$ISODIR/boot/grub"
 cat > "$ISODIR/boot/grub/grub.cfg" <<'GRUB_EOF'
