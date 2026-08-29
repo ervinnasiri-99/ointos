@@ -266,12 +266,18 @@ apt-get install -y \
     ca-certificates \
     gnupg
 
-# Default browser: Ubuntu 26.04 ships 'firefox' (the ESR snap name
-# 'firefox-esr' does not exist in archive) — verified against
-# packages.ubuntu.com/resolute via Playwright.
-# Phase 4 will swap this for Brave per the master prompt.
+# Default browser: BRAVE (.deb, no snap) — per the master prompt, Brave is
+# OintOS's default browser. Adds the official Brave apt repo and installs the
+# real .deb. NOT the snap-transition 'firefox' stub.
+apt-get install -y curl ca-certificates gnupg
+curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
+    https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] \
+    https://brave-browser-apt-release.s3.brave.com/ stable main" \
+    > /etc/apt/sources.list.d/brave-browser-release.list
+apt-get update
 apt-get install -y \
-    firefox \
+    brave-browser \
     vim \
     nano \
     htop
@@ -295,6 +301,45 @@ chmod 700 /var/crash
 # Disable Ubuntu Pro / MOTD that phones home
 rm -f /etc/update-motd.d/50-motd-news 2>/dev/null || true
 echo "OintOS: telemetry disabled by architecture"
+
+# ---------------------------------------------------------------------------
+# NO SNAPS. OintOS is APT-first (master prompt). Purge snapd entirely —
+# it gets pulled in by ubuntu-standard/meta packages and we don't want it.
+# (Verified in the VM: snapd was present; the whole point is a snap-free OintOS.)
+# ---------------------------------------------------------------------------
+echo "OintOS: purging snapd (APT-first policy)"
+apt-get purge -y snapd 2>/dev/null || true
+# Remove the snap-transition 'firefox' stub (it's a mozilla-firefox snap shim;
+# with snapd gone it leaves a broken /usr/bin/firefox). Brave is our browser.
+apt-get purge -y firefox 2>/dev/null || true
+rm -rf /var/cache/snapd /snap ~/snap /root/snap /var/snap 2>/dev/null || true
+apt-get autoremove -y --purge 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# Networking: make the NIC connect out of the box (fixes the "device is
+# strictly unmanaged" seen on VirtualBox/Hyper-V/QEMU). Ubuntu 26.04 NM ships
+# [ifupdown] managed=false, so ethernet shows unmanaged and the KDE applet
+# shows a red icon. Two-pronged fix:
+#   1. NetworkManager: managed=true under [ifupdown]
+#   2. systemd-networkd DHCP fallback (guaranteed connectivity regardless of NM)
+# ---------------------------------------------------------------------------
+echo "OintOS: configuring networking (NM managed=true + systemd-networkd fallback)"
+sed -i 's/^\[ifupdown\]$/[ifupdown]\nmanaged=true/' /etc/NetworkManager/NetworkManager.conf
+mkdir -p /etc/systemd/network
+cat > /etc/systemd/network/20-ointos.network <<'NETEOF'
+[Match]
+Name=en*
+
+[Network]
+DHCP=yes
+NETEOF
+systemctl enable systemd-networkd 2>/dev/null || true
+
+# Audio CLI tools (aplay etc.) were missing in the VM — add them + pipewire utils
+apt-get install -y --no-install-recommends \
+    alsa-utils \
+    pipewire-audio \
+    pipewire-pulse 2>/dev/null || true
 
 # Clean up apt lists to shrink the image
 apt-get clean
