@@ -373,40 +373,44 @@ apt-get autoremove -y --purge 2>/dev/null || true
 # ---------------------------------------------------------------------------
 # Networking: make the NIC connect out of the box AND show in the KDE applet.
 #
-# Root cause of the "network works but the applet shows no interface /
-# unsupported" bug: we enabled systemd-networkd as a DHCP fallback while
-# NetworkManager was ALSO present. Two network managers claiming the same NIC
-# => NM reports the device "unmanaged", and the KDE Plasmoid reads NM, so it
-# shows blank even though the link is up.
+# Ubuntu 26.04 ships NM.conf with [ifupdown] managed=false, making every
+# interface "strictly unmanaged" to NM. The KDE Plasmoid reads NM, so the
+# applet shows "No network interfaces detected" even when the link is up.
 #
-# Fix: ONE network manager — NetworkManager (the KDE applet reads it).
-#   1. Disable/remove systemd-networkd so it stops racing NM for the NIC.
-#   2. Set [ifupdown] managed=true so NM actually manages ethernet (Ubuntu 26.04
-#      ships managed=false, which made NM declare devices "strictly unmanaged").
-#   3. NM auto-connects ethernet via DHCP out of the box (default keyfile
-#      behavior), so no static config or manual step is needed.
+# Previous fix (systemd-networkd fallback) broke the applet: two network
+# managers claiming the NIC caused NM to mark it unmanaged.
+#
+# Fix: ONE network manager — NetworkManager, configured correctly.
+#   1. Kill systemd-networkd (no competition for the NIC).
+#   2. OVERWRITE NM.conf entirely with the correct contents (Ubuntu 26.04's
+#      default is broken for our use case). [ifupdown] managed=true makes
+#      NM manage all interfaces.
+#   3. NM auto-connects ethernet via DHCP out of the box (keyfile backend).
 # ---------------------------------------------------------------------------
 echo "OintOS: configuring networking (single owner: NetworkManager)"
-# Kill the competing systemd-networkd
 systemctl disable systemd-networkd 2>/dev/null || true
 systemctl stop systemd-networkd 2>/dev/null || true
 rm -f /etc/systemd/network/20-ointos.network 2>/dev/null || true
 
-# Make NM manage interfaces (flip the [ifupdown] default)
-if ! grep -q '\[ifupdown\]' /etc/NetworkManager/NetworkManager.conf; then
-    printf '\n[ifupdown]\nmanaged=true\n' >> /etc/NetworkManager/NetworkManager.conf
-else
-    sed -i '/^\[ifupdown\]/,/^\[/d' /etc/NetworkManager/NetworkManager.conf
-    printf '[ifupdown]\nmanaged=true\n' >> /etc/NetworkManager/NetworkManager.conf
-fi
+# Overwrite NM.conf — Ubuntu 26.04 ships [ifupdown] managed=false which
+# causes every NIC to be "strictly unmanaged". Replace it entirely with a
+# clean config where managed=true. Also ensure keyfile backend is enabled
+# (for nmconnection files) and NM manages wifi if present.
+cat > /etc/NetworkManager/NetworkManager.conf <<'NMCONF'
+[main]
+plugins=keyfile,ifupdown
+dns=systemd-resolved
 
-# Ensure NM auto-connects ethernet (create a default keyfile connection)
+[ifupdown]
+managed=true
+NMCONF
+
+# Ensure NM auto-connects any ethernet NIC
 mkdir -p /etc/NetworkManager/system-connections
 cat > /etc/NetworkManager/system-connections/ointos-eth.nmconnection <<'NMCONN'
 [connection]
 id=ointos-eth
 type=ethernet
-interface-name=en*
 autoconnect=true
 
 [ipv4]
