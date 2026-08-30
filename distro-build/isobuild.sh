@@ -282,6 +282,22 @@ apt-get install -y \
     nano \
     htop
 
+# ---------------------------------------------------------------------------
+# Curated default apps (Phase 4). Verified available as .deb on resolute via
+# packages.ubuntu.com (exa research): elisa (music), mpv (video). Everything
+# here is a native .deb — no snaps. These round out the KDE defaults so the
+# live system has sensible apps for common tasks out of the box.
+# ---------------------------------------------------------------------------
+apt-get install -y --no-install-recommends \
+    elisa \
+    mpv \
+    kcalc \
+    sweeper \
+    filelight \
+    kcharselect \
+    kdeconnect \
+    print-manager
+
 # Set up locale + hostname + user
 sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen
 locale-gen
