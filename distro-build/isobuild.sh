@@ -382,24 +382,52 @@ apt-get mark hold snapd 2>/dev/null || true  # belt-and-suspenders
 apt-get autoremove -y --purge 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
-# Networking: make the NIC connect out of the box (fixes the "device is
-# strictly unmanaged" seen on VirtualBox/Hyper-V/QEMU). Ubuntu 26.04 NM ships
-# [ifupdown] managed=false, so ethernet shows unmanaged and the KDE applet
-# shows a red icon. Two-pronged fix:
-#   1. NetworkManager: managed=true under [ifupdown]
-#   2. systemd-networkd DHCP fallback (guaranteed connectivity regardless of NM)
+# Networking: make the NIC connect out of the box AND show in the KDE applet.
+#
+# Root cause of the "network works but the applet shows no interface /
+# unsupported" bug: we enabled systemd-networkd as a DHCP fallback while
+# NetworkManager was ALSO present. Two network managers claiming the same NIC
+# => NM reports the device "unmanaged", and the KDE Plasmoid reads NM, so it
+# shows blank even though the link is up.
+#
+# Fix: ONE network manager — NetworkManager (the KDE applet reads it).
+#   1. Disable/remove systemd-networkd so it stops racing NM for the NIC.
+#   2. Set [ifupdown] managed=true so NM actually manages ethernet (Ubuntu 26.04
+#      ships managed=false, which made NM declare devices "strictly unmanaged").
+#   3. NM auto-connects ethernet via DHCP out of the box (default keyfile
+#      behavior), so no static config or manual step is needed.
 # ---------------------------------------------------------------------------
-echo "OintOS: configuring networking (NM managed=true + systemd-networkd fallback)"
-sed -i 's/^\[ifupdown\]$/[ifupdown]\nmanaged=true/' /etc/NetworkManager/NetworkManager.conf
-mkdir -p /etc/systemd/network
-cat > /etc/systemd/network/20-ointos.network <<'NETEOF'
-[Match]
-Name=en*
+echo "OintOS: configuring networking (single owner: NetworkManager)"
+# Kill the competing systemd-networkd
+systemctl disable systemd-networkd 2>/dev/null || true
+systemctl stop systemd-networkd 2>/dev/null || true
+rm -f /etc/systemd/network/20-ointos.network 2>/dev/null || true
 
-[Network]
-DHCP=yes
-NETEOF
-systemctl enable systemd-networkd 2>/dev/null || true
+# Make NM manage interfaces (flip the [ifupdown] default)
+if ! grep -q '\[ifupdown\]' /etc/NetworkManager/NetworkManager.conf; then
+    printf '\n[ifupdown]\nmanaged=true\n' >> /etc/NetworkManager/NetworkManager.conf
+else
+    sed -i '/^\[ifupdown\]/,/^\[/d' /etc/NetworkManager/NetworkManager.conf
+    printf '[ifupdown]\nmanaged=true\n' >> /etc/NetworkManager/NetworkManager.conf
+fi
+
+# Ensure NM auto-connects ethernet (create a default keyfile connection)
+mkdir -p /etc/NetworkManager/system-connections
+cat > /etc/NetworkManager/system-connections/ointos-eth.nmconnection <<'NMCONN'
+[connection]
+id=ointos-eth
+type=ethernet
+interface-name=en*
+autoconnect=true
+
+[ipv4]
+method=auto
+
+[ipv6]
+method=auto
+NMCONN
+chmod 600 /etc/NetworkManager/system-connections/ointos-eth.nmconnection
+systemctl enable NetworkManager 2>/dev/null || true
 
 # Audio CLI tools (aplay etc.) were missing in the VM — add them + pipewire utils
 apt-get install -y --no-install-recommends \
