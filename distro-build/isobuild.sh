@@ -306,72 +306,9 @@ echo "ointos" > /etc/hostname
 useradd -m -s /bin/bash -G sudo oinstaller 2>/dev/null || true
 echo "oinstaller:ointos" | chpasswd
 
-# ---------------------------------------------------------------------------
-# Branding — system-wide (Phase 3 placeholder; full pass is Phase 14).
-# The repo is mounted at /workspace in the build container. We install:
-#   - the OintOS logo into the hicolor icon theme + pixmaps (so it shows in
-#     taskbar, start menu, about dialogs, branding/logo pickers anywhere),
-#   - a proper Plasma 6 wallpaper PACKAGE (dir + metadata.json with the Image
-#     field) so it appears in the KDE wallpaper picker and is default,
-#   - os-release already identifies OintOS.
-# ---------------------------------------------------------------------------
-if [ -d /workspace/branding ] && ls /workspace/branding/*.png >/dev/null 2>&1; then
-    echo "OintOS: applying branding (system-wide)"
-
-    # --- Wallpaper: real Plasma 6 wallpaper package (shows in picker) ---
-    WP="/usr/share/wallpapers/OintOS"
-    mkdir -p "$WP"
-    cp /workspace/branding/OintOSWallpaper.png "$WP/OintOSWallpaper.png" 2>/dev/null || true
-    # metadata.json is what makes Plasma list it in the wallpaper picker
-    cat > "$WP/metadata.json" <<'WPEOF'
-{
-    "KPlugin": {
-        "Id": "com.ointos.wallpaper",
-        "Name": "OintOS",
-        "Description": "OintOS default wallpaper"
-    },
-    "X-KDE-PluginInfo-Name": "com.ointos.wallpaper",
-    "X-Plasma-Image": "OintOSWallpaper.png"
-}
-WPEOF
-    # fallback copy for anything that reads /usr/share/backgrounds
-    mkdir -p /usr/share/backgrounds
-    cp /workspace/branding/OintOSWallpaper.png /usr/share/backgrounds/ointos.png 2>/dev/null || true
-
-    # --- Logo into hicolor icon theme (system-wide) ---
-    # Sizes we can reasonably produce from the source; put the logo at the
-    # common icon sizes + a scalable/128 for branding. (hicolor is the icon
-    # theme KDE falls back to.)
-    mkdir -p /usr/share/icons/hicolor/{16x16,22x22,24x24,32x32,48x48,64x64,128x128,256x256}/apps
-    for s in 16 22 24 32 48 64 128 256; do
-        # downscale the transparent logo; if convert is unavailable, copy the
-        # source into each size dir (best-effort).
-        if command -v convert >/dev/null 2>&1; then
-            convert "/workspace/branding/Oint(Transparent).png" -resize ${s}x${s} \
-                "/usr/share/icons/hicolor/${s}x${s}/apps/ointos.png" 2>/dev/null || true
-        else
-            cp "/workspace/branding/Oint(Transparent).png" \
-                "/usr/share/icons/hicolor/${s}x${s}/apps/ointos.png" 2>/dev/null || true
-        fi
-    done
-    # ... and a copy as the app icon / window icon
-    cp /workspace/branding/Oint.png /usr/share/pixmaps/ointos.png 2>/dev/null || true
-    # A generic 'distributor-logo' the About/System Settings may use
-    cp /workspace/branding/Oint.png /usr/share/pixmaps/distributor-logo.png 2>/dev/null || true
-
-    # Refresh icon cache so the new icon is indexed
-    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-        gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
-    fi
-
-    # --- Default the desktop wallpaper for all users ---
-    mkdir -p /etc/skel/.config
-    mkdir -p /etc/skel/.local/share/plasma-wallpapers 2>/dev/null || true
-    cat > /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc <<'PLASMA_EOF'
-[Containments][2][Wallpaper][org.kde.image][General]
-Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
-PLASMA_EOF
-fi
+# NOTE: branding (wallpaper + logo) is applied HOST-SIDE after the chroot
+# install (it needs /workspace/branding, which only exists on the host, and
+# writes into $CHROOT_DIR). See the 'Branding' step later in this file.
 
 
 # Zero telemetry (per master prompt — by architecture, not default)
@@ -447,10 +384,22 @@ systemctl disable systemd-networkd 2>/dev/null || true
 systemctl stop systemd-networkd 2>/dev/null || true
 rm -f /etc/systemd/network/20-ointos.network 2>/dev/null || true
 
-# Overwrite NM.conf — Ubuntu 26.04 ships [ifupdown] managed=false which
-# causes every NIC to be "strictly unmanaged". Replace it entirely with a
-# clean config where managed=true. Also ensure keyfile backend is enabled
-# (for nmconnection files) and NM manages wifi if present.
+# ---------------------------------------------------------------------------
+# Networking (researched fix): the REAL reason 'wired' stays unmanaged:
+# Ubuntu ships /usr/lib/NetworkManager/conf.d/10-globally-managed-devices.conf
+# =  unmanaged-devices=*,except:type:wifi,except:type:gsm,except:type:cdma
+# This package drop-in marks EVERYTHING except wifi as unmanaged — and it
+# OVERRIDES [ifupdown] managed=true. (Verified via exa research; multiple
+# sources confirm managed=true alone is insufficient on 20.04+.)
+# Fix: neutralize that drop-in (empty it + add an empty override in /etc),
+# then NM manages all devices including ethernet.
+# ---------------------------------------------------------------------------
+# Neutralize the "globally managed devices=unmanaged except wifi" drop-in
+: > /usr/lib/NetworkManager/conf.d/10-globally-managed-devices.conf 2>/dev/null || true
+mkdir -p /etc/NetworkManager/conf.d
+: > /etc/NetworkManager/conf.d/10-globally-managed-devices.conf 2>/dev/null || true
+
+# Overwrite NM.conf — managed=true under [ifupdown] + keyfile backend.
 cat > /etc/NetworkManager/NetworkManager.conf <<'NMCONF'
 [main]
 plugins=keyfile,ifupdown
@@ -494,6 +443,62 @@ OINTOS_EOF
 chmod +x "$CHROOT_DIR/opt/install-base.sh"
 chroot "$CHROOT_DIR" /bin/bash -lc "/opt/install-base.sh"
 rm -f "$CHROOT_DIR/opt/install-base.sh"
+
+# ---------------------------------------------------------------------------
+# Branding — applied HOST-SIDE into the chroot ($CHROOT_DIR). (This must NOT
+# run inside the chroot install: /workspace/branding only exists on the host,
+# and the merged overlay later inherits these files from the lowerdir.)
+#   - wallpaper as a real Plasma 6 package (metadata.json) so it shows in the
+#     KDE wallpaper picker and is default,
+#   - logo into hicolor icon theme + pixmaps + distributor-logo (system-wide:
+#     taskbar, start menu, about dialogs, branding/settings pages).
+# ---------------------------------------------------------------------------
+if [ -d /workspace/branding ] && ls /workspace/branding/*.png >/dev/null 2>&1; then
+    echo "OintOS: applying branding (host-side into chroot)"
+
+    # --- Wallpaper: real Plasma 6 wallpaper package (shows in picker) ---
+    WP="$CHROOT_DIR/usr/share/wallpapers/OintOS"
+    mkdir -p "$WP"
+    cp /workspace/branding/OintOSWallpaper.png "$WP/OintOSWallpaper.png" 2>/dev/null || echo "WARN: wallpaper copy failed"
+    cat > "$WP/metadata.json" <<'WPEOF'
+{
+    "KPlugin": {
+        "Id": "com.ointos.wallpaper",
+        "Name": "OintOS",
+        "Description": "OintOS default wallpaper"
+    },
+    "X-KDE-PluginInfo-Name": "com.ointos.wallpaper",
+    "X-Plasma-Image": "OintOSWallpaper.png"
+}
+WPEOF
+
+    # fallback copy for anything that reads /usr/share/backgrounds
+    mkdir -p "$CHROOT_DIR/usr/share/backgrounds"
+    cp /workspace/branding/OintOSWallpaper.png "$CHROOT_DIR/usr/share/backgrounds/ointos.png" 2>/dev/null || true
+
+    # --- Logo into hicolor icon theme (system-wide) ---
+    for s in 16 22 24 32 48 64 128 256; do
+        d="$CHROOT_DIR/usr/share/icons/hicolor/${s}x${s}/apps"
+        mkdir -p "$d"
+        if command -v convert >/dev/null 2>&1; then
+            convert "/workspace/branding/Oint(Transparent).png" -resize ${s}x${s} "$d/ointos.png" 2>/dev/null || true
+        else
+            cp "/workspace/branding/Oint(Transparent).png" "$d/ointos.png" 2>/dev/null || true
+        fi
+    done
+    # app/window icon + distributor-logo for About/System Settings
+    mkdir -p "$CHROOT_DIR/usr/share/pixmaps"
+    cp /workspace/branding/Oint.png "$CHROOT_DIR/usr/share/pixmaps/ointos.png" 2>/dev/null || true
+    cp /workspace/branding/Oint.png "$CHROOT_DIR/usr/share/pixmaps/distributor-logo.png" 2>/dev/null || true
+
+    # --- Default the desktop wallpaper for all users (skel) ---
+    mkdir -p "$CHROOT_DIR/etc/skel/.config"
+    mkdir -p "$CHROOT_DIR/etc/skel/.local/share/plasma-wallpapers" 2>/dev/null || true
+    cat > "$CHROOT_DIR/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc" <<'PLASMA_EOF'
+[Containments][2][Wallpaper][org.kde.image][General]
+Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
+PLASMA_EOF
+fi
 
 wrapup_chroot "$CHROOT_DIR"
 
