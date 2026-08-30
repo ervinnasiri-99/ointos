@@ -332,23 +332,12 @@ rm -f /etc/update-motd.d/50-motd-news 2>/dev/null || true
 echo "OintOS: telemetry disabled by architecture"
 
 # ---------------------------------------------------------------------------
-# casper live autologin: defaults to user 'ubuntu', which doesn't exist here.
-# Point casper at our live user so SDDM auto-logs-in (fixes the journal error
-# 'sddm-helper: could not identify user ubuntu').
+# SDDM autologin: so the greeter auto-logs-in as oinstaller.
+# (NOTE: /etc/casper.conf is written in the LIVE-LAYER step, AFTER the casper
+# package is installed — writing it here, before 'casper' is installed, makes
+# dpkg prompt about a modified conffile during casper's install, which blocks
+# the non-interactive build. See the live-layer step.)
 # ---------------------------------------------------------------------------
-cat > /etc/casper.conf <<'CASPER_EOF'
-USERNAME="oinstaller"
-CASPER_FORCE_UNTRUSTED=1
-HOMEONLY=no
-SYSTEM_MOUNTPOINTS=proc,sys,dev,run
-HOSTNAME=ointos
-CASPER_GENERATE_UUID=1
-CASPER_LOG_LEVEL=info
-CASPER_FALLBACK_TIME=10
-CASPER_MEDIA_REQUIRED=0
-CASPER_LIVE_MEDIA_PATH=casper
-CASPER_EOF
-
 mkdir -p /etc/sddm.conf.d/
 cat > /etc/sddm.conf.d/autologin.conf <<'SDDM_EOF'
 [Autologin]
@@ -479,6 +468,22 @@ apt-get install -y casper \
     cryptsetup-bin \
     cryptsetup-initramfs \
     initramfs-tools
+
+# casper is now installed and owns /etc/casper.conf — write Over our config
+# NOW (after install), which avoids a dpkg conffile prompt that would block
+# the non-interactive build. Point casper at our live user oinstaller.
+cat > /etc/casper.conf <<'CASPER_EOF'
+USERNAME="oinstaller"
+CASPER_FORCE_UNTRUSTED=1
+HOMEONLY=no
+SYSTEM_MOUNTPOINTS=proc,sys,dev,run
+HOSTNAME=ointos
+CASPER_GENERATE_UUID=1
+CASPER_LOG_LEVEL=info
+CASPER_FALLBACK_TIME=10
+CASPER_MEDIA_REQUIRED=0
+CASPER_LIVE_MEDIA_PATH=casper
+CASPER_EOF
 
 apt-get autoremove -y --purge
 apt-get purge -y '~c' || true
