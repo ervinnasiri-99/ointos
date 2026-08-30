@@ -498,6 +498,28 @@ EOF
 cat > /etc/initramfs-tools/conf.d/default-layer.conf <<EOF
 LAYERFS_PATH=filesystem.squashfs
 EOF
+
+# ---------------------------------------------------------------------------
+# PATCH casper Bug 2055021 (confirmed on Ubuntu 26.04): casper's initramfs
+# script runs
+#   modprobe -b overlay || panic "/cow format specified as 'overlay' and no
+#                                   support found"
+# When overlayfs is BUILT INTO the kernel (not a module) — which is exactly
+# Ubuntu 26.04's linux-generic — modprobe returns nonzero, so casper PANICS
+# with a false-positive even though overlayfs works. Fix: neutralise the panic
+# (turn the || panic into || true); if overlayfs truly were missing the later
+# overlay mount itself would fail, which is the honest error.
+# ---------------------------------------------------------------------------
+echo "OintOS: patching casper Bug 2055021 (overlayfs built-in false panic)"
+# The casper script contains:
+#   modprobe "${MP_QUIET}" -b overlay || panic "/cow format specified as 'overlay' and no support found"
+# When overlayfs is built into the kernel (linux-generic on 26.04), modprobe
+# returns nonzero -> casper panic, a FALSE POSITIVE (Bug 2055021, confirmed on
+# 26.04). Turn '... || panic <msg>' into '... || true' so it never aborts.
+# (# delim avoids clashing with the || in the pattern.)
+sed -i 's# -b overlay || panic .*# -b overlay || true#' \
+    /usr/share/initramfs-tools/scripts/casper
+
 update-initramfs -c -k all
 OINTOS_EOF
 
