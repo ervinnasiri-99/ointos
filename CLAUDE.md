@@ -6,7 +6,7 @@ OintOS is an Ubuntu 26.04 LTS-based Linux distribution with a Windows-native ins
 
 ## Current phase
 
-Phase 3 — Ubuntu 26.04 + KDE Plasma prototype build (in progress).
+Phase 4 — Distro build system (package curation + reproducibility). Phase 3 (Ubuntu 26.04 + KDE prototype) functionally complete; see `docs/decisions/005-phase4-roadmap.md`.
 
 ## Key rules
 
