@@ -6,7 +6,7 @@ OintOS is an Ubuntu 26.04 LTS-based Linux distribution with a Windows-native ins
 
 ## Current phase
 
-Phase 4 — Distro build system (package curation + reproducibility). Phase 3 (Ubuntu 26.04 + KDE prototype) functionally complete; see `docs/decisions/005-phase4-roadmap.md`.
+Phase 6 — Linux-side live installer (Calamares). Framework decision: **Calamares** (`docs/decisions/007-linux-installer-calamares.md`). Installer code in `linux-installer/` (settings-ointos package, launcher, unattended plan driver). Needs a VM install test (interactive + unattended).
 
 ## Key rules
 
@@ -51,9 +51,14 @@ tests/                     # Unit, integration, VM test harnesses
 
 - `docs/master-prompt.md` — Full requirements spec
 - `docs/architecture/001-libertix-assessment.md` — Libertix architecture analysis
-- `docs/decisions/001-kernel-mesa-strategy.md` — Kernel/mesa strategy proposal
-- `docs/decisions/002-libertix-fork-strategy.md` — Fork approach documentation
-- `docs/decisions/003-build-tool-choice.md` — Build tool decision (live-build)
-- `distro-build/build.sh` — Main ISO build script
-- `distro-build/config/` — live-build configuration (package lists, hooks)
+- `docs/decisions/001-kernel-mesa-strategy.md` — Kernel/mesa strategy
+- `docs/decisions/002-libertix-fork-strategy.md` — Libertix fork approach
+- `docs/decisions/004-build-pipeline-casper.md` — casper build pipeline (replaces live-build)
+- `docs/decisions/007-linux-installer-calamares.md` — Calamares installer decision
+- `distro-build/isobuild.sh` — Main ISO build script (casper pipeline)
+- `distro-build/dockerbuild.sh` — Runs the build in an isolated container (safe path)
+- `linux-installer/calamares-settings-ointos/` — branded Calamares config
+- `linux-installer/launcher/ointos-installer-prompt` — live-session installer launcher
+- `linux-installer/unattended/plan.py` — unattended install plan driver (Windows-handoff)
+- `distro-build/otest.sh` `otest2.sh` `otest3.sh` `otest4.sh` — VM acceptance tests
 - `LICENSE-NOTES.md` — GPL-3.0 obligations and legal review status
