@@ -298,6 +298,13 @@ apt-get install -y --no-install-recommends \
     kdeconnect \
     print-manager
 
+# Phase 6: installer packages (apt install inside the chroot; the branded
+# settings + launcher are copied HOST-SIDE after, see the later step).
+apt-get install -y --no-install-recommends \
+    calamares \
+    os-prober \
+    python3-yaml 2>/dev/null || apt-get install -y --no-install-recommends calamares os-prober
+
 # Set up locale + hostname + user
 sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen
 locale-gen
@@ -500,6 +507,35 @@ Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
 PLASMA_EOF
 fi
 
+# ---------------------------------------------------------------------------
+# Phase 6 installer — copy our branded Calamares settings + launcher into the
+# chroot (HOST-SIDE, because it needs /workspace/linux-installer). The apt
+# packages (calamares, os-prober) were installed inside the chroot earlier.
+# ---------------------------------------------------------------------------
+if [ -d /workspace/linux-installer/calamares-settings-ointos ]; then
+    echo "OintOS: installing Calamares branded settings (host-side into chroot)"
+    # settings + module configs → /etc/calamares
+    mkdir -p "$CHROOT_DIR/etc/calamares"
+    cp /workspace/linux-installer/calamares-settings-ointos/modules/*.conf \
+        "$CHROOT_DIR/etc/calamares/"
+    # branding → /usr/share/calamares/branding/ointos
+    mkdir -p "$CHROOT_DIR/usr/share/calamares/branding/ointos"
+    cp -r /workspace/linux-installer/calamares-settings-ointos/branding/. \
+        "$CHROOT_DIR/usr/share/calamares/branding/ointos/"
+    # landing logo
+    if [ -f /workspace/branding/Oint.png ]; then
+        mkdir -p "$CHROOT_DIR/usr/share/calamares/branding/ointos/img"
+        cp /workspace/branding/Oint.png \
+            "$CHROOT_DIR/usr/share/calamares/branding/ointos/img/logo.png"
+    fi
+fi
+if [ -f /workspace/linux-installer/launcher/ointos-installer-prompt ]; then
+    echo "OintOS: installing installer launcher"
+    cp /workspace/linux-installer/launcher/ointos-installer-prompt \
+        "$CHROOT_DIR/usr/bin/ointos-installer-prompt"
+    chmod +x "$CHROOT_DIR/usr/bin/ointos-installer-prompt"
+fi
+
 wrapup_chroot "$CHROOT_DIR"
 
 # ---------------------------------------------------------------------------
@@ -586,6 +622,29 @@ echo "OintOS: patching casper Bug 2055021 (overlayfs built-in false panic)"
 # (# delim avoids clashing with the || in the pattern.)
 sed -i 's# -b overlay || panic .*# -b overlay || true#' \
     /usr/share/initramfs-tools/scripts/casper
+
+# ---------------------------------------------------------------------------
+# Live-session installer auto-launch.
+# The GRUB "Install OintOS" entry boots with oininstaller=launch. This systemd
+# service checks /proc/cmdline for it and, when present, launches Calamares
+# once the desktop is up (after the live user session). Non-intrusive: if the
+# arg is absent (Try OintOS), the service does nothing.
+# ---------------------------------------------------------------------------
+cat > /etc/systemd/system/ointos-installer.service <<'SER'
+[Unit]
+Description=OintOS Installer (auto-launch)
+After=graphical-session.target
+ConditionKernelCommandLine=oininstaller=launch
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ointos-installer-prompt
+
+[Install]
+WantedBy=graphical-session.target
+SER
+systemctl enable ointos-installer.service 2>/dev/null || true
 
 update-initramfs -c -k all
 OINTOS_EOF
@@ -695,6 +754,12 @@ set menu_color_highlight=black/light-gray
 menuentry "Try OintOS" {
     set gfxpayload=keep
     linux /casper/vmlinuz --- boot=casper quiet splash
+    initrd /casper/initrd
+}
+
+menuentry "Install OintOS" {
+    set gfxpayload=keep
+    linux /casper/vmlinuz --- boot=casper quiet splash oininstaller=launch
     initrd /casper/initrd
 }
 

@@ -1,0 +1,32 @@
+#!/bin/bash
+# ============================================================================
+# OintOS installer prompt — launches Calamares from the live KDE session.
+#
+# Mirrors Kubuntu's kubuntu-installer-prompt behavior. Launches Calamares as
+# root (it needs partition/bootloader privileges) while preserving the X/Wayland
+# display env so the GUI appears on the live desktop. (Kubuntu hit a Wayland +
+# sudo-rs env-passing bug — LP #2124199 — fixed by passing these explicitly.)
+#
+# Not installed in the installed system; only used in the live session.
+# ============================================================================
+set -euo pipefail
+
+# If not on a live medium, calm-complain and exit.
+if ! command -v calamares >/dev/null 2>&1; then
+    echo "OintOS installer is only available from the live session." >&2
+    exit 1
+fi
+
+# --- Preserve display env through sudo (Wayland/X11) -----------------------
+SUDO_ENV=(
+    "DISPLAY=${DISPLAY:-}"
+    "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-}"
+    "QT_QPA_PLATFORMTHEME=${QT_QPA_PLATFORMTHEME:-}"
+    "XDG_CURRENT_DESKTOP=${XDG_CURRENT_DESKTOP:-}"
+    "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-}"
+)
+
+# --- Launch Calamares as root, preserving the graphics env -----------------
+# shellcheck disable=SC2086
+sudo -E env "${SUDO_ENV[@]}" calamares --is-installer
