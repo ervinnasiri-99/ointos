@@ -1,0 +1,39 @@
+/* OintOS Calamares Qt stylesheet (orchid palette) */
+QWidget {
+    font-family: "Noto Sans";
+    font-size: 14px;
+}
+
+QPushButton {
+    background-color: #bb42bc;   /* Vivid Orchid */
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+}
+QPushButton:hover {
+    background-color: #c35ec5;   /* Orchid Mist */
+}
+QPushButton:pressed {
+    background-color: #791f7d;   /* Purple */
+}
+QPushButton:disabled {
+    background-color: #facbfc;   /* Pink Orchid */
+    color: #888;
+}
+
+QLineEdit, QComboBox {
+    border: 1px solid #c35ec5;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QLabel#sidebarTitleLabel {
+    color: #bb42bc;
+    font-size: 20px;
+    font-weight: bold;
+}
+QLabel#sidebarTextLabel {
+    color: #791f7d;
+    font-size: 14px;
+}

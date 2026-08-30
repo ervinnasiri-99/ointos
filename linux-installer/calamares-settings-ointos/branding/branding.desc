@@ -1,0 +1,30 @@
+---
+# OintOS branding for Calamares
+# (Calamares branding.desc — see https://calamares.io/docs/components/branding.html)
+componentName:  ointos
+name:           OintOS
+version:        1.0
+shortVersion:   1.0
+website:        https://github.com/ervinnasiri-99/ointos
+image:          "img/logo.png"
+logo:           "img/logo.png"
+# OintOS orchid palette
+style:          "stylesheet.qss"
+
+# Welcome / general strings
+strings:
+    productName:         OintOS
+    shortProductName:    OintOS
+    version:             1.0
+    shortVersion:        1.0
+    versionedName:       "OintOS 1.0"
+    shortVersionedName:  "OintOS 1.0"
+    bootloaderEntryName: "OintOS"
+
+# Slideshow: the QML that plays during install
+slideshow: "show.qml"
+slideshowAPI: 1
+
+# Default window size
+windowWidth:  800
+windowHeight: 520
