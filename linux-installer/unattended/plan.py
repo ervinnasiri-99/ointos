@@ -183,10 +183,12 @@ def main():
         print("Dry run: not running calamares.")
         return 0
 
+    # Calamares 3.3.x has no --is-installer flag; mode is set via settings.conf
+    # (the sequence with exec modules determines installer vs welcome).
     if os.geteuid() != 0 and not args.no_sudo:
-        cmd = ["sudo", "calamares", "--is-installer", "-c", args.cal_conf]
+        cmd = ["sudo", "calamares", "-c", args.cal_conf]
     else:
-        cmd = ["calamares", "--is-installer", "-c", args.cal_conf]
+        cmd = ["calamares", "-c", args.cal_conf]
     print("Running:", shlex.join(cmd))
     return subprocess.call(cmd)
 

@@ -28,5 +28,8 @@ SUDO_ENV=(
 )
 
 # --- Launch Calamares as root, preserving the graphics env -----------------
+# Calamares 3.3.x does NOT have --is-installer; it reads the installer mode
+# from settings.conf (the sequence with exec modules is what makes it an
+# installer). We pass -c /etc/calamares to be explicit about config location.
 # shellcheck disable=SC2086
-sudo -E env "${SUDO_ENV[@]}" calamares --is-installer
+sudo -E env "${SUDO_ENV[@]}" calamares -c /etc/calamares
