@@ -71,3 +71,32 @@ lands on a real installed system.
 
 `distro-build/otest4.sh` verifies the installed system after a test install
 (subvolumes, GRUB, users, timeshift config, no snapd).
+## Calamares 3.3.x gotchas (from debugging)
+
+### No `--is-installer` flag
+Calamares 3.3.x has **no** `--is-installer` CLI flag. Installer mode is determined
+entirely by `settings.conf` (the `sequence` with `exec` modules). The correct
+invocation is just `calamares` (or `calamares -c /etc/calamares`).
+
+### Required settings.conf booleans
+Calamares 3.3.x **will complain** if these are not explicitly set:
+```yaml
+prompt-install: false
+dont-chroot: false
+oem-setup: false
+disable-cancel: false
+disable-cancel-during-exec: false
+hide-back-and-next-during-exec: false
+quit-at-end: false
+```
+
+### App menu "Install System"
+The `calamares` package ships a `.desktop` file that launches Calamares with the
+default config. When clicking "Install System" in the KDE app menu, Calamares
+reads `/etc/calamares/settings.conf` (our installed config) and shows the
+installer if the sequence has `exec` modules. No `--is-installer` needed.
+
+### Launching from terminal (for debugging)
+```bash
+sudo calamares -c /etc/calamares -d 2>&1 | tee /tmp/calamares-debug.log
+```
