@@ -498,9 +498,27 @@ WPEOF
     cp /workspace/branding/Oint.png "$CHROOT_DIR/usr/share/pixmaps/ointos.png" 2>/dev/null || true
     cp /workspace/branding/Oint.png "$CHROOT_DIR/usr/share/pixmaps/distributor-logo.png" 2>/dev/null || true
 
-    # --- Default the desktop wallpaper for all users (skel) ---
+    # --- Default the desktop wallpaper for all users ---
+    # The wallpaper must be set EVERY SESSION because Plasma 6 assigns
+    # runtime Containment IDs (not 2 as in Plasma 5), and skel configs
+    # may not match the session's Containment IDs. The reliable fix is
+    # an /etc/xdg/autostart script that runs kwriteconfig5 on every
+    # desktop startup — this writes to the REAL Plasma config that
+    # Plasma actually reads.
+    mkdir -p "$CHROOT_DIR/etc/xdg/autostart"
+    cat > "$CHROOT_DIR/etc/xdg/autostart/ointos-wallpaper.desktop" <<'AUTOEOF'
+[Desktop Entry]
+Type=Application
+Name=OintOS Wallpaper
+Exec=bash -c 'DISPLAY=:0 XDG_RUNTIME_DIR=/run/user/$(id -u) kwriteconfig5 --file plasma-org.kde.plasma.desktop-appletsrc --group "Containments" --group $(kreadconfig5 --file plasma-org.kde.plasma.desktop-appletsrc --group "Containments" --key "" 2>/dev/null | head -1) --group "Wallpaper" --group "org.kde.image" --key "General" --group "General" --key "Image" --type string "file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png" 2>/dev/null || true'
+Terminal=false
+X-KDE-autostart-after.payload=true
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-phase=autostart
+AUTOEOF
+    chmod +x "$CHROOT_DIR/etc/xdg/autostart/ointos-wallpaper.desktop"
+    # Also write to skel as a fallback (if autostart is delayed, skel catches new users)
     mkdir -p "$CHROOT_DIR/etc/skel/.config"
-    mkdir -p "$CHROOT_DIR/etc/skel/.local/share/plasma-wallpapers" 2>/dev/null || true
     cat > "$CHROOT_DIR/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc" <<'PLASMA_EOF'
 [Containments][2][Wallpaper][org.kde.image][General]
 Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
