@@ -522,34 +522,40 @@ WPEOF
     # the autostart script handles it by iterating all Containments.
     # ---------------------------------------------------------------------------
     # Build-time config: oinstaller's home (fallback / initial value)
+    # CRITICAL: In Plasma 6, the desktop is Containment 1 (org.kde.plasma.folder),
+    # NOT Containment 2 (org.kde.plasma.panel). The wallpaper section MUST go
+    # under [Containments][1], not [2].
     mkdir -p "$CHROOT_DIR/home/oinstaller/.config"
     cat > "$CHROOT_DIR/home/oinstaller/.config/plasma-org.kde.plasma.desktop-appletsrc" <<'PLASMA_EOF'
-[Containments]
-[2]
-lastScreen=0
-
-[Containments][2][ConfigPreload]
-PreloadWeight=42
-
-[Containments][2][Wallpaper]
+[Containments][1][Wallpaper]
 lastPlugin=org.kde.image
 
-[Containments][2][Wallpaper][org.kde.image][General]
+[Containments][1][Wallpaper][org.kde.image][General]
 Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
 PLASMA_EOF
     chown -R 1000:1000 "$CHROOT_DIR/home/oinstaller/.config"
 
-    # Login-time autostart: detect Containment IDs and set wallpaper
-    # Works in live sessions (ephemeral) and installed systems alike.
+    # Login-time autostart: set the OintOS wallpaper on desktop startup.
+    # Plasma 6: desktop = Containment 1 (org.kde.plasma.folder), NOT 2 (panel).
+    # This script writes the [Wallpaper] section to the existing config so the
+    # desktop widget picks it up. On next user change, Plasma overwrites this
+    # file — giving "default only, never override" behavior.
     mkdir -p "$CHROOT_DIR/etc/xdg/autostart"
     cat > "$CHROOT_DIR/etc/xdg/autostart/ointos-wallpaper.desktop" <<'AUTOEOF'
 [Desktop Entry]
 Type=Application
 Name=OintOS Wallpaper
-Exec=bash -c 'D=$(kreadconfig5 --file plasma-org.kde.plasma.desktop-appletsrc --group Containment --key "" 2>/dev/null | head -1); [ -n "$D" ] && kwriteconfig5 --file plasma-org.kde.plasma.desktop-appletsrc --group Containment --group "$D" --group Wallpaper --group org.kde.image --key General --group General --key Image --type string "file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png" 2>/dev/null'
+Exec=bash -c 'CFG=~/.config/plasma-org.kde.plasma.desktop-appletsrc; grep -q "org.kde.image.*OintOS" "$CFG" 2>/dev/null || cat >> "$CFG" <<'"'"'EOF'"'"'
+
+[Containments][1][Wallpaper]
+lastPlugin=org.kde.image
+
+[Containments][1][Wallpaper][org.kde.image][General]
+Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
+EOF'
 Terminal=false
 X-KDE-autostart-after.payload=true
-X-GNOME-Autostart-enabled=true
+X-GNOME-Autostard-enabled=true
 X-KDE-autostart-phase=autostart
 AUTOEOF
     chmod +x "$CHROOT_DIR/etc/xdg/autostart/ointos-wallpaper.desktop"
