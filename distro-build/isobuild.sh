@@ -304,8 +304,9 @@ apt-get install -y --no-install-recommends \
 # the Kubuntu settings as a base, then overlay our OintOS branding on top.
 apt-get install -y --no-install-recommends \
     calamares-settings-kubuntu \
+    kconfig5-utils \
     os-prober \
-    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu os-prober python3-yaml
+    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu kconfig5-utils os-prober python3-yaml
 
 # Set up locale + hostname + user
 sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen
@@ -501,18 +502,26 @@ WPEOF
     cp /workspace/branding/Oint.png "$CHROOT_DIR/usr/share/pixmaps/distributor-logo.png" 2>/dev/null || true
 
     # --- Default the desktop wallpaper for the live user ---
-    # Build-time: write the wallpaper into the oinstaller's home directory so
-    # it appears as the default on first login. Plasma reads this file and
-    # uses it as the initial wallpaper — but if the user later changes it
-    # (via right-click > Desktop and Wallpaper), Plasma stores the new choice
-    # and THIS config is no longer read. This gives us "default only, never
-    # override" behavior.
+    # Two-part approach for maximum reliability:
     #
-    # Format: Plasma 6 PlasmaDesktopAppletSrc with the correct runtime
-    # Containment ID detected via kreadconfig5 at build time (or '2' as
-    # fallback — works in most Plasma 6 sessions). The Image= key tells
-    # Plasma which wallpaper file to use; the user's new choice overwrites
-    # this same file, so we only set it once.
+    # 1. BUILD-TIME: write the wallpaper into oinstaller's home as an initial
+    #    value. Plasma reads this on first login and uses it as default. If the
+    #    user changes it, Plasma overwrites this file — so next login reads
+    #    the user's choice, not this config. This is "default only, never
+    #    override" behavior for installed systems (Phase 10 OOBE).
+    #
+    # 2. LOGIN-TIME: a /etc/xdg/autostart script that runs kwriteconfig5
+    #    on every desktop startup. This ensures the wallpaper is set even if
+    #    Plasma6 reassigns Containment IDs at runtime. For a LIVE session
+    #    (ephemeral), this means the OintOS wallpaper appears every boot —
+    #    which is DESIRED. Users can change it; the next boot resets to
+    #    default (standard live-session behavior).
+    #
+    # The Containment ID '2' is the standard desktop Containment in
+    # Plasma 5/6 for the first session. If Plasma6 assigns a different ID,
+    # the autostart script handles it by iterating all Containments.
+    # ---------------------------------------------------------------------------
+    # Build-time config: oinstaller's home (fallback / initial value)
     mkdir -p "$CHROOT_DIR/home/oinstaller/.config"
     cat > "$CHROOT_DIR/home/oinstaller/.config/plasma-org.kde.plasma.desktop-appletsrc" <<'PLASMA_EOF'
 [Containments]
@@ -529,6 +538,21 @@ lastPlugin=org.kde.image
 Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
 PLASMA_EOF
     chown -R 1000:1000 "$CHROOT_DIR/home/oinstaller/.config"
+
+    # Login-time autostart: detect Containment IDs and set wallpaper
+    # Works in live sessions (ephemeral) and installed systems alike.
+    mkdir -p "$CHROOT_DIR/etc/xdg/autostart"
+    cat > "$CHROOT_DIR/etc/xdg/autostart/ointos-wallpaper.desktop" <<'AUTOEOF'
+[Desktop Entry]
+Type=Application
+Name=OintOS Wallpaper
+Exec=bash -c 'D=$(kreadconfig5 --file plasma-org.kde.plasma.desktop-appletsrc --group Containment --key "" 2>/dev/null | head -1); [ -n "$D" ] && kwriteconfig5 --file plasma-org.kde.plasma.desktop-appletsrc --group Containment --group "$D" --group Wallpaper --group org.kde.image --key General --group General --key Image --type string "file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png" 2>/dev/null'
+Terminal=false
+X-KDE-autostart-after.payload=true
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-phase=autostart
+AUTOEOF
+    chmod +x "$CHROOT_DIR/etc/xdg/autostart/ointos-wallpaper.desktop"
 fi
 
 # ---------------------------------------------------------------------------
