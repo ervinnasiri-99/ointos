@@ -304,9 +304,10 @@ apt-get install -y --no-install-recommends \
 # the Kubuntu settings as a base, then overlay our OintOS branding on top.
 apt-get install -y --no-install-recommends \
     calamares-settings-kubuntu \
+    calamares-data \
     kde-cli-tools \
     os-prober \
-    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu kde-cli-tools os-prober python3-yaml
+    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu calamares-data kde-cli-tools os-prober python3-yaml
 
 # Set up locale + hostname + user
 sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen
