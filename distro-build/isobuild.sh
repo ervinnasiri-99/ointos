@@ -298,12 +298,14 @@ apt-get install -y --no-install-recommends \
     kdeconnect \
     print-manager
 
-# Phase 6: installer packages (apt install inside the chroot; the branded
-# settings + launcher are copied HOST-SIDE after, see the later step).
+# Phase 6: installer packages.
+# calamares-settings-kubuntu provides the full Calamares settings + QML modules
+# that make it work (the bare 'calamares' package lacks QML modules). We install
+# the Kubuntu settings as a base, then overlay our OintOS branding on top.
 apt-get install -y --no-install-recommends \
-    calamares \
+    calamares-settings-kubuntu \
     os-prober \
-    python3-yaml 2>/dev/null || apt-get install -y --no-install-recommends calamares os-prober
+    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu os-prober python3-yaml
 
 # Set up locale + hostname + user
 sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen
