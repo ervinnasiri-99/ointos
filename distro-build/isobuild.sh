@@ -305,9 +305,9 @@ apt-get install -y --no-install-recommends \
 apt-get install -y --no-install-recommends \
     calamares-settings-kubuntu \
     calamares-data \
-    kde-cli-tools \
+    libkf6config-bin \
     os-prober \
-    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu calamares-data kde-cli-tools os-prober python3-yaml
+    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu calamares-data libkf6config-bin os-prober python3-yaml
 
 # Set up locale + hostname + user
 sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen
