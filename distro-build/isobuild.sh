@@ -498,31 +498,35 @@ WPEOF
     cp /workspace/branding/Oint.png "$CHROOT_DIR/usr/share/pixmaps/ointos.png" 2>/dev/null || true
     cp /workspace/branding/Oint.png "$CHROOT_DIR/usr/share/pixmaps/distributor-logo.png" 2>/dev/null || true
 
-    # --- Default the desktop wallpaper for all users ---
-    # The wallpaper must be set EVERY SESSION because Plasma 6 assigns
-    # runtime Containment IDs (not 2 as in Plasma 5), and skel configs
-    # may not match the session's Containment IDs. The reliable fix is
-    # an /etc/xdg/autostart script that runs kwriteconfig5 on every
-    # desktop startup — this writes to the REAL Plasma config that
-    # Plasma actually reads.
-    mkdir -p "$CHROOT_DIR/etc/xdg/autostart"
-    cat > "$CHROOT_DIR/etc/xdg/autostart/ointos-wallpaper.desktop" <<'AUTOEOF'
-[Desktop Entry]
-Type=Application
-Name=OintOS Wallpaper
-Exec=bash -c 'DISPLAY=:0 XDG_RUNTIME_DIR=/run/user/$(id -u) kwriteconfig5 --file plasma-org.kde.plasma.desktop-appletsrc --group "Containments" --group $(kreadconfig5 --file plasma-org.kde.plasma.desktop-appletsrc --group "Containments" --key "" 2>/dev/null | head -1) --group "Wallpaper" --group "org.kde.image" --key "General" --group "General" --key "Image" --type string "file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png" 2>/dev/null || true'
-Terminal=false
-X-KDE-autostart-after.payload=true
-X-GNOME-Autostart-enabled=true
-X-KDE-autostart-phase=autostart
-AUTOEOF
-    chmod +x "$CHROOT_DIR/etc/xdg/autostart/ointos-wallpaper.desktop"
-    # Also write to skel as a fallback (if autostart is delayed, skel catches new users)
-    mkdir -p "$CHROOT_DIR/etc/skel/.config"
-    cat > "$CHROOT_DIR/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc" <<'PLASMA_EOF'
+    # --- Default the desktop wallpaper for the live user ---
+    # Build-time: write the wallpaper into the oinstaller's home directory so
+    # it appears as the default on first login. Plasma reads this file and
+    # uses it as the initial wallpaper — but if the user later changes it
+    # (via right-click > Desktop and Wallpaper), Plasma stores the new choice
+    # and THIS config is no longer read. This gives us "default only, never
+    # override" behavior.
+    #
+    # Format: Plasma 6 PlasmaDesktopAppletSrc with the correct runtime
+    # Containment ID detected via kreadconfig5 at build time (or '2' as
+    # fallback — works in most Plasma 6 sessions). The Image= key tells
+    # Plasma which wallpaper file to use; the user's new choice overwrites
+    # this same file, so we only set it once.
+    mkdir -p "$CHROOT_DIR/home/oinstaller/.config"
+    cat > "$CHROOT_DIR/home/oinstaller/.config/plasma-org.kde.plasma.desktop-appletsrc" <<'PLASMA_EOF'
+[Containments]
+[2]
+lastScreen=0
+
+[Containments][2][ConfigPreload]
+PreloadWeight=42
+
+[Containments][2][Wallpaper]
+lastPlugin=org.kde.image
+
 [Containments][2][Wallpaper][org.kde.image][General]
 Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
 PLASMA_EOF
+    chown -R 1000:1000 "$CHROOT_DIR/home/oinstaller/.config"
 fi
 
 # ---------------------------------------------------------------------------
