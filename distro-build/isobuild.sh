@@ -583,6 +583,19 @@ if [ -d /workspace/linux-installer/calamares-settings-ointos ]; then
         cp /workspace/branding/Oint.png \
             "$CHROOT_DIR/usr/share/calamares/branding/ointos/img/logo.png"
     fi
+    # CRITICAL: Calamares 3.3.x looks for QML in /etc/calamares/qml/ when
+    # launched with `-c /etc/calamares`. The real QML lives at
+    # /usr/share/calamares/qml/ (from calamares-data package). Without this
+    # symlink, Calamares crashes with "FATAL: qml/ directory missing".
+    if [ ! -e "$CHROOT_DIR/etc/calamares/qml" ] && [ -d "$CHROOT_DIR/usr/share/calamares/qml" ]; then
+        echo "OintOS: symlinking /etc/calamares/qml → /usr/share/calamares/qml"
+        ln -s /usr/share/calamares/qml "$CHROOT_DIR/etc/calamares/qml"
+    fi
+    # Also symlink modules to resolve "module-search entry non-existent" warning.
+    if [ ! -e "$CHROOT_DIR/usr/share/calamares/modules" ] && [ -d "$CHROOT_DIR/usr/lib/x86_64-linux-gnu/calamares/modules" ]; then
+        echo "OintOS: symlinking /usr/share/calamares/modules → /usr/lib/.../calamares/modules"
+        ln -s /usr/lib/x86_64-linux-gnu/calamares/modules "$CHROOT_DIR/usr/share/calamares/modules"
+    fi
 fi
 if [ -f /workspace/linux-installer/launcher/ointos-installer-prompt ]; then
     echo "OintOS: installing installer launcher"
