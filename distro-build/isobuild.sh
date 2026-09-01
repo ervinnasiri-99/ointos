@@ -594,10 +594,15 @@ if [ -d /workspace/linux-installer/calamares-settings-ointos ]; then
     mkdir -p "$CHROOT_DIR/etc/calamares"
     cp /workspace/linux-installer/calamares-settings-ointos/modules/*.conf \
         "$CHROOT_DIR/etc/calamares/"
-    # branding → /usr/share/calamares/branding/ointos
+    # branding → /usr/share/calamares/branding/ointos AND /etc/calamares/branding/ointos
+    # (Calamares with -c /etc/calamares looks for branding in the config path;
+    #  without a symlink, it can't find our branding.desc)
     mkdir -p "$CHROOT_DIR/usr/share/calamares/branding/ointos"
     cp -r /workspace/linux-installer/calamares-settings-ointos/branding/. \
         "$CHROOT_DIR/usr/share/calamares/branding/ointos/"
+    mkdir -p "$CHROOT_DIR/etc/calamares/branding/ointos"
+    cp -r /workspace/linux-installer/calamares-settings-ointos/branding/. \
+        "$CHROOT_DIR/etc/calamares/branding/ointos/"
     # landing logo
     if [ -f /workspace/branding/Oint.png ]; then
         mkdir -p "$CHROOT_DIR/usr/share/calamares/branding/ointos/img"
