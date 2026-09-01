@@ -1,6 +1,10 @@
 ---
 # OintOS branding for Calamares
 # (Calamares branding.desc — see https://calamares.io/docs/components/branding.html)
+# CRITICAL: Calamares 3.3.x merges this with the default branding from
+# calamares-data. If we don't override a key, the default's value is used.
+# The `images` key must be explicitly set here (even empty) to shadow the
+# default's productIcon/productLogo/productWelcome which use squid.png.
 componentName:  ointos
 name:           OintOS
 version:        1.0
@@ -10,6 +14,12 @@ image:          "img/logo.png"
 logo:           "img/logo.png"
 # OintOS orchid palette
 style:          "stylesheet.qss"
+
+# Override images from default branding (squid.png) with OintOS logo
+images:
+    productIcon:  "img/logo.png"
+    productLogo:  "img/logo.png"
+    productWelcome: "img/logo.png"
 
 # Welcome / general strings
 strings:
