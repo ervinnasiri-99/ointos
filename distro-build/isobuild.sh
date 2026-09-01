@@ -536,6 +536,27 @@ Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
 PLASMA_EOF
     chown -R 1000:1000 "$CHROOT_DIR/home/oinstaller/.config"
 
+    # CRITICAL: use kwriteconfig6 (KDE 6) to set the wallpaper on the
+    # EXISTING config file. This writes the correct Plasma 6 format that
+    # Plasma actually reads. kwriteconfig6 works WITHOUT a running Plasma
+    # session — it's just a config-file writer.
+    chroot "$CHROOT_DIR" /bin/bash -c '
+        if command -v kwriteconfig6 >/dev/null 2>&1; then
+            kwriteconfig6 \
+                --file /home/oinstaller/.config/plasma-org.kde.plasma.desktop-appletsrc \
+                --group Containment --group 1 \
+                --group Wallpaper --group org.kde.image \
+                --key General --group General \
+                --key Image \
+                --type string \
+                "file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png" 2>&1
+            echo "kwriteconfig6: wallpaper set"
+        else
+            echo "WARNING: kwriteconfig6 not found in chroot — wallpaper config may not apply"
+        fi
+    '
+    chown -R 1000:1000 "$CHROOT_DIR/home/oinstaller/.config"
+
     # Login-time autostart: set the OintOS wallpaper on desktop startup.
     # Plasma 6: desktop = Containment 1 (org.kde.plasma.folder), NOT 2 (panel).
     # This script writes the [Wallpaper] section to the existing config so the
