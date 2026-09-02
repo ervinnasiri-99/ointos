@@ -12,9 +12,15 @@ shortVersion:   1.0
 website:        https://github.com/ervinnasiri-99/ointos
 image:          "img/logo.png"
 logo:           "img/logo.png"
-# OintOS orchid palette — Calamares finds stylesheet.qss by convention
-# in the branding directory; do not specify 'style' as a string (Calamares
-# expects a map if present, which causes a YAML parse error).
+# OintOS orchid palette (Calamares requires 'style' to be a YAML MAP, not a
+# string. The default branding has a 'style' map — if we don't provide one,
+# Calamares merges it and hits a YAML parse error. We MUST provide it as a
+# map with valid keys: SidebarBackground, SidebarText, etc.)
+style:
+    SidebarBackground:    "#791f7d"
+    SidebarText:          "#FFFFFF"
+    SidebarTextCurrent:   "#bb42bc"
+    SidebarTextHighlight: "#c35ec5"
 
 # Override images from default branding (squid.png) with OintOS logo
 images:
