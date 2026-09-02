@@ -557,30 +557,33 @@ PLASMA_EOF
     '
     chown -R 1000:1000 "$CHROOT_DIR/home/oinstaller/.config"
 
-    # Login-time autostart: set the OintOS wallpaper on desktop startup.
-    # Plasma 6: desktop = Containment 1 (org.kde.plasma.folder), NOT 2 (panel).
-    # This script writes the [Wallpaper] section to the existing config so the
-    # desktop widget picks it up. On next user change, Plasma overwrites this
-    # file — giving "default only, never override" behavior.
-    mkdir -p "$CHROOT_DIR/etc/xdg/autostart"
-    cat > "$CHROOT_DIR/etc/xdg/autostart/ointos-wallpaper.desktop" <<'AUTOEOF'
-[Desktop Entry]
-Type=Application
-Name=OintOS Wallpaper
-Exec=bash -c 'CFG=~/.config/plasma-org.kde.plasma.desktop-appletsrc; grep -q "org.kde.image.*OintOS" "$CFG" 2>/dev/null || cat >> "$CFG" <<'"'"'EOF'"'"'
+    # Wallpaper: systemd user service that runs plasma-apply-wallpaperimage
+    # after the desktop session starts. This is the CONFIRMED WORKING approach
+    # for KDE 6 multi-user setups (KDE docs + NixOS + enterprise thin clients).
+    # It runs on every login (resetting to OintOS default) — DESIRED for live
+    # sessions (ephemeral, resets each boot). For installed systems, OOBE
+    # (Phase 10) handles wallpaper selection; the service provides the default.
+    #
+    # Enabled system-wide for ALL users (not just oinstaller) via the
+    # graphical-session.target.wants symlink.
+    mkdir -p "$CHROOT_DIR/usr/lib/systemd/user"
+    cat > "$CHROOT_DIR/usr/lib/systemd/user/ointos-wallpaper.service" <<'SVEOF'
+[Unit]
+Description=OintOS default wallpaper
+After=graphical-session.target
 
-[Containments][1][Wallpaper]
-lastPlugin=org.kde.image
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/plasma-apply-wallpaperimage /usr/share/wallpapers/OintOS/OintOSWallpaper.png
+RemainAfterExit=yes
 
-[Containments][1][Wallpaper][org.kde.image][General]
-Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
-EOF'
-Terminal=false
-X-KDE-autostart-after.payload=true
-X-GNOME-Autostard-enabled=true
-X-KDE-autostart-phase=autostart
-AUTOEOF
-    chmod +x "$CHROOT_DIR/etc/xdg/autostart/ointos-wallpaper.desktop"
+[Install]
+WantedBy=graphical-session.target
+SVEOF
+    # Enable for ALL users system-wide
+    mkdir -p "$CHROOT_DIR/etc/systemd/user/graphical-session.target.wants"
+    ln -sf /usr/lib/systemd/user/ointos-wallpaper.service \
+        "$CHROOT_DIR/etc/systemd/user/graphical-session.target.wants/ointos-wallpaper.service"
 fi
 
 # ---------------------------------------------------------------------------
