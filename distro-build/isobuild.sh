@@ -630,6 +630,7 @@ if [ -d /workspace/linux-installer/calamares-settings-ointos ]; then
     # (/etc/calamares/branding/ointos/img/logo.png). Ensure the logo exists
     # at BOTH the /etc and /usr/share paths so the error goes away.
     if [ -f "$CHROOT_DIR/usr/share/calamares/branding/ointos/img/logo.png" ]; then
+        mkdir -p "$CHROOT_DIR/etc/calamares/branding/ointos/img"
         cp "$CHROOT_DIR/usr/share/calamares/branding/ointos/img/logo.png" \
            "$CHROOT_DIR/etc/calamares/branding/ointos/img/logo.png"
     fi
