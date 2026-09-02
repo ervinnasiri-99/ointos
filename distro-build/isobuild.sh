@@ -622,6 +622,14 @@ if [ -d /workspace/linux-installer/calamares-settings-ointos ]; then
         echo "OintOS: symlinking /usr/share/calamares/modules → /usr/lib/.../calamares/modules"
         ln -s /usr/lib/x86_64-linux-gnu/calamares/modules "$CHROOT_DIR/usr/share/calamares/modules"
     fi
+    # CRITICAL: branding.desc references 'img/logo.png'. When launched with
+    # -c /etc/calamares, Calamares resolves this relative to the config path
+    # (/etc/calamares/branding/ointos/img/logo.png). Ensure the logo exists
+    # at BOTH the /etc and /usr/share paths so the error goes away.
+    if [ -f "$CHROOT_DIR/usr/share/calamares/branding/ointos/img/logo.png" ]; then
+        cp "$CHROOT_DIR/usr/share/calamares/branding/ointos/img/logo.png" \
+           "$CHROOT_DIR/etc/calamares/branding/ointos/img/logo.png"
+    fi
 fi
 if [ -f /workspace/linux-installer/launcher/ointos-installer-prompt ]; then
     echo "OintOS: installing installer launcher"
