@@ -66,8 +66,6 @@ network-manager
 "
 PACKAGES_SYSTEM="
 ubuntu-standard
-btrfs-progs
-timeshift
 htop
 inxi
 git
@@ -224,7 +222,6 @@ apt-get install -y --no-install-recommends \
     linux-image-generic \
     initramfs-tools \
     squashfs-tools \
-    btrfs-progs \
     ubuntu-standard \
     openntpd \
     locales
@@ -250,7 +247,6 @@ apt-get install -y \
 
 # OintOS system tools
 apt-get install -y \
-    timeshift \
     htop \
     inxi \
     git \

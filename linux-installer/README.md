@@ -6,12 +6,13 @@ driver used by the Windows-side handoff.
 
 ## Framework: Calamares
 
-Decision + rationale in `docs/decisions/007-linux-installer-calamares.md`.
+Decision + rationale in `docs/decisions/007-linux-installer-calamares.md`;
+filesystem reversal in `008-ext4-default-drop-btrfs.md`.
 Short version: Calamares (Kubuntu 26.04 ships it on the same Ubuntu+Plasma+
-casper stack), because its Btrfs subvolume module produces the `@`/`@home`
-layout Timeshift mandates (Phase 5), it installs from our casper live layout
-(`unpackfs` reads `/cdrom/casper/filesystem.squashfs`), is KDE-native and
-GPL-3.0.
+casper stack), because it installs from our casper live layout (`unpackfs`
+reads `/cdrom/casper/filesystem.squashfs`), is KDE-native and GPL-3.0.
+Target filesystem is ext4 (Btrfs dropped after the build15 unpackfs RAM
+freeze — see 008).
 
 ## Layout
 
@@ -33,8 +34,8 @@ linux-installer/
 - Boot the OintOS ISO; GRUB → **"Install OintOS"** (or pick "Try OintOS" and
   run `ointos-installer-prompt` in a terminal).
 - The installer launches Branded Calamares: locale → keyboard → partition →
-  user → summary. It unpacks `/cdrom/casper/filesystem.squashfs` onto a Btrfs
-  `@`/`@home`/... layout and installs GRUB (os-prober for dual-boot).
+  user → summary. It unpacks `/cdrom/casper/filesystem.squashfs` onto an
+  ext4 root and installs GRUB (os-prober for dual-boot).
 
 ## Unattended install (Windows-side handoff)
 
@@ -61,16 +62,15 @@ sudo python3 unattended/plan.py unattended/example-plan.yaml
 - adds a GRUB `Install OintOS` entry (kernel arg `oininstaller=launch`),
 - adds a systemd service that auto-launches the installer when that arg is set.
 
-## Phase 5 tie-in
+## Phase 5 tie-in (dropped per 008)
 
-The Btrfs layout this installer creates (`@`, `@home`, ...) is what deferred
-Phase 5 (snapshot/rollback) needs — once the installer produces it, Phase 5
-lands on a real installed system.
+Btrfs snapshot/rollback was deferred to Phase 5, then dropped entirely
+(ext4 default after the build15 unpackfs RAM freeze).
 
 ## Testing
 
 `distro-build/otest4.sh` verifies the installed system after a test install
-(subvolumes, GRUB, users, timeshift config, no snapd).
+(ext4 root, GRUB, users, no snapd, no btrfs leftovers).
 ## Calamares 3.3.x gotchas (from debugging)
 
 ### `modules-search: [ local ]` is mandatory

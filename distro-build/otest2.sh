@@ -7,7 +7,7 @@
 #   2. Brave browser installed as a real .deb (not the snap stub)
 #   3. Network auto-connects (NM managed + systemd-networkd) — no manual fix
 #   4. Audio CLI present (aplay) + PipeWire
-#   5. General regressions from build #1 (btrfs, systemd, GPU, mounts)
+#   5. General regressions from build #1 (systemd, GPU, mounts; btrfs dropped per 008)
 #
 # Run in the OintOS VM's Konsole:  bash otest2.sh
 # ============================================================================
@@ -81,8 +81,9 @@ aplay -l 2>&1 | head -4
 pause
 
 # ---------------------------------------------------------------------------
-h "5. REGRESSIONS: btrfs / systemd / GPU / mounts"
-which btrfs timeshift >/dev/null 2>&1 && pass "btrfs + timeshift" || fail "btrfs/timeshift missing"
+h "5. REGRESSIONS: no btrfs / systemd / GPU / mounts"
+which btrfs >/dev/null 2>&1 && fail "btrfs tool present (dropped per 008)" || pass "no btrfs tool"
+which timeshift >/dev/null 2>&1 && fail "timeshift present (dropped per 008)" || pass "no timeshift"
 echo "  systemd: $(systemctl is-system-running 2>&1)"
 [ "$(systemctl --failed --no-legend 2>/dev/null | wc -l)" -le 2 ] && pass "few failed units" || { warn "failed units:"; systemctl --failed --no-legend | head; }
 for d in /proc /sys /dev; do mountpoint -q "$d" && pass "$d mounted" || fail "$d MISSING"; done

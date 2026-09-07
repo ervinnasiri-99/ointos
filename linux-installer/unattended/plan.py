@@ -6,8 +6,7 @@ Reads an install plan (YAML or JSON, subiquity-shaped so the Windows/Libertix
 side can produce it) and drives a HEADLESS Calamares install:
 
   1. Parse the plan (disk, partitioning, filesystem, user, features/late-commands).
-  2. Pre-seed /etc/calamares/*.conf from the plan (partition, users, btrfs
-     subvolumes for Phase 5).
+  2. Pre-seed /etc/calamares/*.conf from the plan (partition, users).
   3. Write an exec-only settings.conf.
   4. Invoke `calamares -c <conf>` with that config.
 
@@ -23,8 +22,7 @@ Plan schema (subiquity-flavored for Libertix), e.g.:
         disk: /dev/sda
         layout: gpt
         efi: true
-        filesystem: btrfs
-        subvolumes: [@, @home, @cache, @log]
+        filesystem: ext4
     late_commands:
         - "install-ointos-apps.sh"
 """
@@ -83,37 +81,17 @@ def build(plan, cal_conf="/etc/calamares"):
         "efiSystemPartition": "/boot/efi",
         "enableLuksAutomatedPartitioning": True,
         "luksGeneration": "luks2",
-        "userSwapChoices": ["none", "file"],
-        "initialSwapChoice": "file",
+        "userSwapChoices": ["none", "small", "suspend", "file"],
+        "initialSwapChoice": "suspend",
         "drawNestedPartitions": True,
         "alwaysShowPartitionLabels": True,
         "allowManualPartitioning": False,        # unattended
-        "defaultFileSystemType": storage.get("filesystem", "btrfs"),
-        "availableFileSystemTypes": ["ext4", "btrfs", "xfs"],
+        "defaultFileSystemType": "ext4",
+        "availableFileSystemTypes": ["ext4"],
     }
     write_conf(os.path.join(moddir, "partition.conf"), partition)
 
-    # --- mount.conf (btrfs subvolumes => Phase 5 / Timeshift) -------------
-    # mount.schema.yaml has additionalProperties:false: ONLY extraMounts,
-    # btrfsSubvolumes, btrfsSwapSubvol, mountOptions are valid. Entry keys
-    # are `mountPoint` (capital P). mountOptions entries are
-    # {filesystem, options[], ssdOptions[], hddOptions[]}.
-    sv = storage.get("subvolumes", ["@", "@home", "@cache", "@log"])
-    # Timeshift / Calamares expect the Ubuntu-type layout:
-    #   "@"  -> mountpoint "/"      (root subvolume)
-    #   "@home" -> mountpoint "/home"
-    #   "@cache" -> mountpoint "/var/cache" (configurable per distro)
-    def _subvol(s):
-        name = s.lstrip("@")
-        if name == "":
-            return {"mountPoint": "/", "subvolume": "/@"}
-        if name == "cache":
-            return {"mountPoint": "/var/cache", "subvolume": "/@cache"}
-        if name == "log":
-            return {"mountPoint": "/var/log", "subvolume": "/@log"}
-        return {"mountPoint": "/" + name, "subvolume": "/" + s}
-
-    btrfs = [_subvol(s) for s in sv]
+    # --- mount.conf (ext4 target, decision 008: no btrfs) -----------------
     mount = {
         "extraMounts": [
             {"device": "proc", "fs": "proc", "mountPoint": "/proc"},
@@ -126,15 +104,9 @@ def build(plan, cal_conf="/etc/calamares"):
             {"device": "efivarfs", "fs": "efivarfs",
              "mountPoint": "/sys/firmware/efi/efivars", "efi": True},
         ],
-        "btrfsSubvolumes": btrfs,
-        "btrfsSwapSubvol": "/@swap",
         "mountOptions": [
             {"filesystem": "default", "options": ["defaults"]},
             {"filesystem": "efi", "options": ["defaults", "umask=0077"]},
-            {"filesystem": "btrfs",
-             "options": ["defaults", "compress=zstd:1"]},
-            {"filesystem": "btrfs_swap",
-             "options": ["defaults", "noatime"]},
         ],
     }
     write_conf(os.path.join(moddir, "mount.conf"), mount)

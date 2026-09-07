@@ -1,5 +1,5 @@
 # OintOS unattended install plan (subiquity-shaped for Libertix handoff)
-# Example: full-disk Btrfs install with @/@home snapshot layout + late command.
+# Example: full-disk ext4 install (decision 008: btrfs dropped) + late command.
 identity:
   username: oinstaller
   hostname: ointos
@@ -7,8 +7,7 @@ storage:
   disk: /dev/sda
   layout: gpt
   efi: true
-  filesystem: btrfs
-  subvolumes: ["@", "@home", "@cache", "@log"]
+  filesystem: ext4
 late_commands:
   - "chroot ${ROOT} update-grub || true"
   - "chroot ${ROOT} touch /etc/ointos-installed"

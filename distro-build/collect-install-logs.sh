@@ -15,10 +15,15 @@ CALLOG=/tmp/cal-debug.log
 {
     echo "===== PRE: $(date) ====="
     echo "--- free ---"; free -h
-    echo "--- lsblk ---"; lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT
-    echo "--- df ---"; df -h / /tmp
+    echo "--- lsblk ---"; lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT; lsblk -f
+    echo "--- df (full) ---"; df -h
+    echo "--- swapon ---"; swapon --show 2>/dev/null || echo none
     echo "--- efi ---"; ls /sys/firmware/efi 2>&1
     echo "--- calamares mounts ---"; mount | grep -i calamares || echo none
+    echo "--- cow/overlay ---"; mount | grep -E 'cow|overlay' || echo none
+    echo "--- findmnt ---"; findmnt | grep -E 'calamares|cow|overlay|/dev/sd' || echo none
+    echo "--- calamares-root size ---"; du -sh /tmp/calamares-root-* 2>&1
+    echo "--- cmdline ---"; cat /proc/cmdline
     echo "--- modules-search ---"; grep -H 'modules-search' /etc/calamares/settings.conf
     echo "--- modules dir ---"; ls /etc/calamares/modules/
 } > "$OUT" 2>&1
@@ -36,9 +41,12 @@ sudo -E env "${SUDO_ENV[@]}" calamares -c /etc/calamares -d 2>&1 | tee "$CALLOG"
     echo ""
     echo "===== POST: $(date) ====="
     echo "--- free ---"; free -h
-    echo "--- df ---"; df -h / /tmp
+    echo "--- df (full) ---"; df -h
+    echo "--- swapon ---"; swapon --show 2>/dev/null || echo none
     echo "--- lsblk ---"; lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINT
     echo "--- calamares mounts ---"; mount | grep -i calamares || echo none
+    echo "--- findmnt ---"; findmnt | grep -E 'calamares|cow|overlay|/dev/sd' || echo none
+    echo "--- calamares-root size ---"; du -sh /tmp/calamares-root-* 2>&1
     echo "--- dmesg ---"; dmesg | grep -i -E "squashfs|I/O error|read error|No space" | tail -15
     echo "--- rsync ---"; grep -n -i -A3 rsync "$CALLOG" | tail -20
     echo "--- mount/partition/ERROR ---"; grep -n -i -E "mount|no space|write failed|ERROR|calamares-root|Failed" "$CALLOG" | head -60

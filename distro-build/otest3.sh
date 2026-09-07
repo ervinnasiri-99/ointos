@@ -7,7 +7,7 @@
 #   B. Wallpaper appears in the KDE picker AND is default (//OintOS wallpaper)
 #   C. OintOS logo is installed system-wide (hicolor + pixmaps + distributor-logo)
 #   D. Curated default apps are present (.deb, no snaps)
-#   E. Regressions: no snapd, Brave .deb, btrfs, casper initrd patched
+#   E. Regressions: no snapd, Brave .deb, no btrfs (008), casper initrd patched
 #
 # Run in the OintOS VM:  bash otest3.sh
 # ============================================================================
@@ -82,7 +82,8 @@ pause
 h "E. Regressions"
 dpkg -l snapd 2>/dev/null | grep -q ^ii && fail "snapd STILL present" || pass "no snapd"
 command -v brave-browser >/dev/null 2>&1 && pass "brave present" || fail "brave missing"
-which btrfs timeshift >/dev/null 2>&1 && pass "btrfs+timeshift" || fail "btrfs/timeshift missing"
+which btrfs >/dev/null 2>&1 && fail "btrfs tool present (dropped per 008)" || pass "no btrfs tool"
+which timeshift >/dev/null 2>&1 && fail "timeshift present (dropped per 008)" || pass "no timeshift"
 # casper initrd patched? check the casper script no longer has the panic guard
 if [ -f /usr/share/initramfs-tools/scripts/casper ]; then
     grep -q "no support found" /usr/share/initramfs-tools/scripts/casper && warn "casper panic string still present in script (may still be patched in initrd)" || pass "casper no false-panic string (script patched)"

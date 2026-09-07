@@ -70,9 +70,9 @@ aplay -l 2>&1 | head -6
 pause
 
 # ---------------------------------------------------------------------------
-header "5. Filesystem / Btrfs tooling"
-which btrfs timeshift 2>/dev/null && pass "btrfs+timeshift present" || fail "btrfs/timeshift missing"
-sudo btrfs --version 2>/dev/null
+header "5. Filesystem (ext4 per 008, no btrfs)"
+which btrfs >/dev/null 2>&1 && fail "btrfs tool present (dropped)" || pass "no btrfs tool"
+which timeshift >/dev/null 2>&1 && fail "timeshift present (dropped)" || pass "no timeshift"
 echo "  mount root: $(findmnt -no FSTYPE / 2>/dev/null || echo '?')"
 pause
 
