@@ -304,14 +304,15 @@ apt-get install -y --no-install-recommends \
 # `calamares-settings-kubuntu` = Kubuntu's settings.conf + module confs +
 # branding, used as reference/base — we OVERWRITE /etc/calamares/settings.conf
 # and /etc/calamares/modules/*.conf with our own OintOS configs host-side.
-# `ckbcomp` = keyboard layout previews on the keyboard page.
+# `console-setup` = ships /usr/bin/ckbcomp (keyboard layout previews on
+# the keyboard page; there is no standalone `ckbcomp` package).
 apt-get install -y --no-install-recommends \
     calamares-settings-kubuntu \
     calamares-data \
     libkf6config-bin \
-    ckbcomp \
+    console-setup \
     os-prober \
-    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu calamares-data libkf6config-bin ckbcomp os-prober python3-yaml
+    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu calamares-data libkf6config-bin console-setup os-prober python3-yaml
 
 # Set up locale + hostname + user
 sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen
