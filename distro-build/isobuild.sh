@@ -299,15 +299,19 @@ apt-get install -y --no-install-recommends \
     print-manager
 
 # Phase 6: installer packages.
-# calamares-settings-kubuntu provides the full Calamares settings + QML modules
-# that make it work (the bare 'calamares' package lacks QML modules). We install
-# the Kubuntu settings as a base, then overlay our OintOS branding on top.
+# `calamares` = the installer (all view/job module binaries).
+# `calamares-data` = QML slideshow framework (/usr/share/calamares/qml).
+# `calamares-settings-kubuntu` = Kubuntu's settings.conf + module confs +
+# branding, used as reference/base — we OVERWRITE /etc/calamares/settings.conf
+# and /etc/calamares/modules/*.conf with our own OintOS configs host-side.
+# `ckbcomp` = keyboard layout previews on the keyboard page.
 apt-get install -y --no-install-recommends \
     calamares-settings-kubuntu \
     calamares-data \
     libkf6config-bin \
+    ckbcomp \
     os-prober \
-    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu calamares-data libkf6config-bin os-prober python3-yaml
+    python3-yaml || apt-get install -y --no-install-recommends calamares-settings-kubuntu calamares-data libkf6config-bin ckbcomp os-prober python3-yaml
 
 # Set up locale + hostname + user
 sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen
@@ -593,10 +597,15 @@ fi
 # ---------------------------------------------------------------------------
 if [ -d /workspace/linux-installer/calamares-settings-ointos ]; then
     echo "OintOS: installing Calamares branded settings (host-side into chroot)"
-    # settings + module configs → /etc/calamares
-    mkdir -p "$CHROOT_DIR/etc/calamares"
-    cp /workspace/linux-installer/calamares-settings-ointos/modules/*.conf \
-        "$CHROOT_DIR/etc/calamares/"
+    # settings.conf → /etc/calamares/ ; module configs → /etc/calamares/modules/
+    # (Calamares looks for <module>.conf ONLY in /etc/calamares/modules and
+    # /usr/share/calamares/modules — NOT directly in /etc/calamares/.)
+    mkdir -p "$CHROOT_DIR/etc/calamares/modules"
+    cp /workspace/linux-installer/calamares-settings-ointos/modules/settings.conf \
+        "$CHROOT_DIR/etc/calamares/settings.conf"
+    for _c in /workspace/linux-installer/calamares-settings-ointos/modules/*.conf; do
+        [ "$(basename "$_c")" = "settings.conf" ] || cp "$_c" "$CHROOT_DIR/etc/calamares/modules/"
+    done
     # branding → /usr/share/calamares/branding/ointos AND /etc/calamares/branding/ointos
     # (Calamares with -c /etc/calamares looks for branding in the config path;
     #  without a symlink, it can't find our branding.desc)

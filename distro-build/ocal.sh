@@ -27,8 +27,8 @@ if [ -f "$DESC" ]; then
     python3 -c "import yaml; yaml.safe_load(open('$DESC')); print('YAML VALID')" 2>&1 || warn "YAML parsing issue"
     echo "  --- Keys present ---"
     grep -E '^[a-zA-Z].*:' "$DESC" | head -15
-    echo "  --- 'style' key check ---"
-    grep -q '^style:' "$DESC" && warn "'style' key found (may cause YAML map error)" || pass "no 'style' key"
+    echo "  --- 'style' key check (must be a MAP, not a string) ---"
+    python3 -c "import yaml; d=yaml.safe_load(open('$DESC')); assert isinstance(d.get('style'), dict), 'style not a MAP'; print('style MAP OK')" 2>&1 || fail "'style' missing or not a YAML map"
 else
     fail "branding.desc NOT FOUND at $DESC"
 fi
@@ -44,13 +44,22 @@ ls -d /usr/share/calamares/modules/ 2>/dev/null && pass "modules symlink exists"
 ls -d /usr/share/calamares/qml/ 2>/dev/null && pass "QML directory exists" || warn "no QML dir"
 ls -d /etc/calamares/qml/ 2>/dev/null && pass "QML symlink exists" || warn "no /etc/calamares/qml/ symlink"
 
-h "4. settings.conf"
+h "4. settings.conf + module configs"
 if [ -f /etc/calamares/settings.conf ]; then
+    grep -q 'modules-search' /etc/calamares/settings.conf \
+        && pass "modules-search present (missing = ALL modules fail)" \
+        || fail "modules-search MISSING — every module fails to load"
     echo "  Contents:"
     cat /etc/calamares/settings.conf
 else
-    warn "settings.conf not found"
+    fail "settings.conf not found"
 fi
+echo "  --- /etc/calamares/modules/ (Calamares ONLY looks here + /usr/share/.../modules) ---"
+ls /etc/calamares/modules/ 2>/dev/null || fail "modules/ dir missing"
+for _m in welcome locale keyboard partition users summary mount unpackfs displaymanager bootloader shellprocess finished machineid fstab localecfg networkcfg hwclock grubcfg umount; do
+    [ -f "/etc/calamares/modules/$_m.conf" ] || [ -f "/usr/share/calamares/modules/$_m.conf" ] \
+        && pass "$_m.conf found" || warn "$_m.conf missing (OK only for summary/finished + job modules needing no conf)"
+done
 
 h "5. Wallpaper"
 CFG="/home/oinstaller/.config/plasma-org.kde.plasma.desktop-appletsrc"

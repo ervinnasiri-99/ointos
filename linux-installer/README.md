@@ -48,8 +48,8 @@ sudo python3 unattended/plan.py unattended/example-plan.yaml
 - Plan is YAML/JSON, subiquity-shaped (`identity`, `storage`, `late_commands`).
 - `--dry-run` writes configs without installing; `--cal-conf` overrides
   `/etc/calamares`.
-- Writes an exec-only `settings.conf` (partition → mount → unpackfs → users →
-  displaymanager → bootloader → shellprocess → finished) so there's no UI.
+- Writes an exec-only `settings.conf` (same exec chain as the interactive
+  one, Kubuntu-trimmed) so there's no UI.
 - `shellprocess.conf` carries the plan's `late_commands`.
 
 ## Integration with the ISO build
@@ -72,6 +72,22 @@ lands on a real installed system.
 `distro-build/otest4.sh` verifies the installed system after a test install
 (subvolumes, GRUB, users, timeshift config, no snapd).
 ## Calamares 3.3.x gotchas (from debugging)
+
+### `modules-search: [ local ]` is mandatory
+Without it the search list is **empty**, zero modules are found, and EVERY
+module fails with "not found in module search paths" → the "unable to load
+all of the configured modules" dialog. `local` = `$LIBDIR/calamares/modules`
+(`/usr/lib/x86_64-linux-gnu/calamares/modules`). Verified in
+`src/libcalamares/Settings.cpp` (`interpretModulesSearch`): missing key =
+empty list, no builtin default.
+
+### Module `.conf` files live in `modules/`, not next to `settings.conf`
+Calamares only searches `/etc/calamares/modules` + `/usr/share/calamares/
+modules` for `<module>.conf`. A conf placed directly in `/etc/calamares/`
+is silently ignored (module still loads — missing conf is warning-only,
+fatal only on YAML syntax errors; see `Module::loadConfigurationFile`).
+`isobuild.sh`/`install.sh` put `settings.conf` in `/etc/calamares/` and
+everything else in `/etc/calamares/modules/`.
 
 ### No `--is-installer` flag
 Calamares 3.3.x has **no** `--is-installer` CLI flag. Installer mode is determined

@@ -9,7 +9,7 @@ side can produce it) and drives a HEADLESS Calamares install:
   2. Pre-seed /etc/calamares/*.conf from the plan (partition, users, btrfs
      subvolumes for Phase 5).
   3. Write an exec-only settings.conf.
-  4. Invoke `calamares --is-installer` with that config.
+  4. Invoke `calamares -c <conf>` with that config.
 
 This is the thin unattended layer the master prompt needs for the Windows-side
 handoff (Phase 7) — Calamares itself has no native autoinstall, so we generate
@@ -71,22 +71,33 @@ def build(plan, cal_conf="/etc/calamares"):
     ident = plan.get("identity", {})
     storage = plan.get("storage", {})
 
+    # Module .conf files live in <cal_conf>/modules/ (NOT directly in
+    # <cal_conf>/ — Calamares only searches /etc/calamares/modules and
+    # /usr/share/calamares/modules for them).
+    moddir = os.path.join(cal_conf, "modules")
+
     # --- partition.conf ---------------------------------------------------
+    # Key names per upstream PartitionViewStep.cpp: userSwapChoices is
+    # REQUIRED; plural availableFileSystemTypes (singular is ignored).
     partition = {
-        "defaultPartitioningTableType": storage.get("layout", "gpt"),
-        "defaultPartitioningImplementation": storage.get("layout", "gpt"),
+        "efiSystemPartition": "/boot/efi",
+        "enableLuksAutomatedPartitioning": True,
+        "luksGeneration": "luks2",
+        "userSwapChoices": ["none", "file"],
+        "initialSwapChoice": "file",
+        "drawNestedPartitions": True,
         "alwaysShowPartitionLabels": True,
-        "defaultFilesystemType": storage.get("filesystem", "btrfs"),
         "allowManualPartitioning": False,        # unattended
-        "allowEmptyPartitions": False,
-        "allowResize": False,
-        "userSupportedPartitioningModes": [],
-        "initialPartitioningChoice": "alongside",
-        # os-prober for dual-boot
+        "defaultFileSystemType": storage.get("filesystem", "btrfs"),
+        "availableFileSystemTypes": ["ext4", "btrfs", "xfs"],
     }
-    write_conf(os.path.join(cal_conf, "partition.conf"), partition)
+    write_conf(os.path.join(moddir, "partition.conf"), partition)
 
     # --- mount.conf (btrfs subvolumes => Phase 5 / Timeshift) -------------
+    # mount.schema.yaml has additionalProperties:false: ONLY extraMounts,
+    # btrfsSubvolumes, btrfsSwapSubvol, mountOptions are valid. Entry keys
+    # are `mountPoint` (capital P). mountOptions entries are
+    # {filesystem, options[], ssdOptions[], hddOptions[]}.
     sv = storage.get("subvolumes", ["@", "@home", "@cache", "@log"])
     # Timeshift / Calamares expect the Ubuntu-type layout:
     #   "@"  -> mountpoint "/"      (root subvolume)
@@ -95,53 +106,92 @@ def build(plan, cal_conf="/etc/calamares"):
     def _subvol(s):
         name = s.lstrip("@")
         if name == "":
-            return {"mountpoint": "/", "subvolume": "/@"}
+            return {"mountPoint": "/", "subvolume": "/@"}
         if name == "cache":
-            return {"mountpoint": "/var/cache", "subvolume": "/@cache"}
+            return {"mountPoint": "/var/cache", "subvolume": "/@cache"}
         if name == "log":
-            return {"mountpoint": "/var/log", "subvolume": "/@log"}
-        return {"mountpoint": "/" + name, "subvolume": "/" + s}
+            return {"mountPoint": "/var/log", "subvolume": "/@log"}
+        return {"mountPoint": "/" + name, "subvolume": "/" + s}
 
     btrfs = [_subvol(s) for s in sv]
     mount = {
-        "mountOptions": ["default"],
+        "extraMounts": [
+            {"device": "proc", "fs": "proc", "mountPoint": "/proc"},
+            {"device": "sys", "fs": "sysfs", "mountPoint": "/sys"},
+            {"device": "/dev", "mountPoint": "/dev",
+             "options": ["bind"]},
+            {"device": "tmpfs", "fs": "tmpfs", "mountPoint": "/run"},
+            {"device": "/run/udev", "mountPoint": "/run/udev",
+             "options": ["bind"]},
+            {"device": "efivarfs", "fs": "efivarfs",
+             "mountPoint": "/sys/firmware/efi/efivars", "efi": True},
+        ],
         "btrfsSubvolumes": btrfs,
-        "efiMountOptions": ["utf8"],
-        "cryptoPassphrase": "",
+        "btrfsSwapSubvol": "/@swap",
+        "mountOptions": [
+            {"filesystem": "default", "options": ["defaults"]},
+            {"filesystem": "efi", "options": ["defaults", "umask=0077"]},
+            {"filesystem": "btrfs",
+             "options": ["defaults", "compress=zstd:1"]},
+            {"filesystem": "btrfs_swap",
+             "options": ["defaults", "noatime"]},
+        ],
     }
-    write_conf(os.path.join(cal_conf, "mount.conf"), mount)
+    write_conf(os.path.join(moddir, "mount.conf"), mount)
 
     # --- users.conf -------------------------------------------------------
+    # Upstream schema requires defaultGroups, autologinGroup, sudoersGroup.
     users = {
+        "doAutologin": False,
         "setRootPassword": False,
-        "autologinUser": "",
+        "doReusePassword": True,
+        "allowRootPassword": True,
         "sudoersGroup": "sudo",
+        "autologinGroup": "autologin",
+        "defaultGroups": ["adm", "cdrom", "dip", "lpadmin", "plugdev",
+                          {"name": "sambashare", "must_exist": False,
+                           "system": True}, "sudo"],
+        "passwordRequirements": {"minLength": 1, "maxLength": -1},
+        "user": {"shell": "/bin/bash", "forbidden_names": ["root"]},
     }
     if ident.get("username"):
-        users["doAutologin"] = False
         users["autologinUser"] = ident["username"]
-    write_conf(os.path.join(cal_conf, "users.conf"), users)
+    write_conf(os.path.join(moddir, "users.conf"), users)
 
     # --- bootloader.conf --------------------------------------------------
+    # bootloader.schema.yaml: additionalProperties:false, ONLY these keys.
     bootloader = {
         "efiBootLoader": "grub",
-        "grubInstallTarget": "/boot",
-        "osproberEnabled": True,
-        "efiFallback": True,
+        "grubInstall": "grub-install",
+        "grubMkconfig": "grub-mkconfig",
+        "grubCfg": "/boot/grub/grub.cfg",
+        "grubProbe": "grub-probe",
+        "efiBootMgr": "efibootmgr",
+        "installEFIFallback": True,
+        "installHybridGRUB": False,
     }
-    write_conf(os.path.join(cal_conf, "bootloader.conf"), bootloader)
+    write_conf(os.path.join(moddir, "bootloader.conf"), bootloader)
 
     # --- shellprocess.conf (late commands) --------------------------------
+    # Key is `script:` (list) NOT `scripts:` — with `scripts:` the module
+    # loads but runs nothing. Leading "-" on a command ignores its failure.
     late = [
-        {"name": "update-grub", "command": "chroot ${ROOT} update-grub || true"}
+        {"command": "-chroot ${ROOT} update-grub", "timeout": 300}
     ]
     for cmd in plan.get("late_commands", []):
-        late.append({"name": "late-" + str(len(late)), "command": cmd})
-    write_conf(os.path.join(cal_conf, "shellprocess.conf"), {"scripts": late})
+        late.append({"command": cmd, "timeout": 300})
+    write_conf(os.path.join(moddir, "shellprocess.conf"),
+               {"dontChroot": False, "timeout": 300, "verbose": True,
+                "script": late})
 
     # --- settings.conf: exec-only (unattended) -----------------------------
+    # modules-search MUST be [ local ]: `local` = $LIBDIR/calamares/modules.
+    # Extra absolute paths only produce "module-search entry non-existent"
+    # noise; never list /usr/lib/calamares/modules.
+    # Exec chain mirrors the interactive one (Kubuntu-trimmed): every entry
+    # ships in Ubuntu's `calamares` package.
     settings = {
-        "modules-search": ["local", "/usr/lib/calamares/modules"],
+        "modules-search": ["local"],
         "instances": [
             {"id": "partition", "module": "partition", "config": "partition.conf"},
             {"id": "mount", "module": "mount", "config": "mount.conf"},
@@ -150,16 +200,24 @@ def build(plan, cal_conf="/etc/calamares"):
             {"id": "displaymanager", "module": "displaymanager", "config": "displaymanager.conf"},
             {"id": "bootloader", "module": "bootloader", "config": "bootloader.conf"},
             {"id": "shellprocess", "module": "shellprocess", "config": "shellprocess.conf"},
-            {"id": "finished", "module": "finished"},
         ],
-        "sequence": {
-            "exec": [
-                "partition", "mount", "unpackfs", "users", "displaymanager",
-                "bootloader", "shellprocess", "finished",
-            ]
-        },
+        "sequence": [
+            {"exec": [
+                "partition", "mount", "unpackfs", "machineid", "fstab",
+                "locale", "keyboard", "localecfg", "users",
+                "displaymanager", "networkcfg", "hwclock", "grubcfg",
+                "bootloader", "shellprocess", "umount",
+            ]},
+            {"show": ["finished"]},
+        ],
         "branding": "ointos",
         "prompt-install": False,
+        "dont-chroot": False,
+        "oem-setup": False,
+        "disable-cancel": False,
+        "disable-cancel-during-exec": False,
+        "hide-back-and-next-during-exec": False,
+        "quit-at-end": False,
     }
     write_conf(os.path.join(cal_conf, "settings.conf"), settings)
 
