@@ -222,7 +222,6 @@ apt-get update
 apt-get install -y --no-install-recommends \
     linux-generic \
     linux-image-generic \
-    linux-headers-generic \
     initramfs-tools \
     squashfs-tools \
     btrfs-progs \
