@@ -731,26 +731,44 @@ sed -i 's# -b overlay || panic .*# -b overlay || true#' \
 
 # ---------------------------------------------------------------------------
 # Live-session installer auto-launch.
-# The GRUB "Install OintOS" entry boots with oininstaller=launch. This systemd
-# service checks /proc/cmdline for it and, when present, launches Calamares
-# once the desktop is up (after the live user session). Non-intrusive: if the
-# arg is absent (Try OintOS), the service does nothing.
+# The GRUB "Install OintOS" entry boots with oininstaller=launch. A system
+# unit WantedBy=graphical-session.target does NOT work here:
+# graphical-session.target is a *user* unit, so a system service never fires.
+# Instead: XDG autostart entry (runs inside the live user session) gated on
+# /proc/cmdline, + a clickable "Install OintOS" icon. Passwordless sudo for
+# calamares only, so the GUI launch never blocks on a TTY prompt (live user
+# password stays `ointos` for everything else).
 # ---------------------------------------------------------------------------
-cat > /etc/systemd/system/ointos-installer.service <<'SER'
-[Unit]
-Description=OintOS Installer (auto-launch)
-After=graphical-session.target
-ConditionKernelCommandLine=oininstaller=launch
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/usr/bin/ointos-installer-prompt
-
-[Install]
-WantedBy=graphical-session.target
-SER
-systemctl enable ointos-installer.service 2>/dev/null || true
+rm -f /etc/systemd/system/ointos-installer.service
+rm -f /etc/systemd/system/graphical-session.target.wants/ointos-installer.service
+cat > /etc/xdg/autostart/ointos-installer.desktop <<'DESK_EOF'
+[Desktop Entry]
+Type=Application
+Name=Install OintOS
+Exec=sh -c 'grep -q oininstaller=launch /proc/cmdline && /usr/bin/ointos-installer-prompt &'
+OnlyShowIn=KDE;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+DESK_EOF
+cat > /usr/share/applications/ointos-installer.desktop <<'DESK_EOF'
+[Desktop Entry]
+Type=Application
+Name=Install OintOS
+Comment=Install OintOS to your hard disk
+Exec=/usr/bin/ointos-installer-prompt
+Icon=/usr/share/calamares/branding/ointos/img/logo.png
+Terminal=false
+Categories=System;
+DESK_EOF
+mkdir -p /home/oinstaller/Desktop
+cp /usr/share/applications/ointos-installer.desktop "/home/oinstaller/Desktop/Install OintOS.desktop"
+chmod +x "/home/oinstaller/Desktop/Install OintOS.desktop"
+chown -R 1000:1000 /home/oinstaller/Desktop
+cat > /etc/sudoers.d/ointos-installer <<'SUDO_EOF'
+oinstaller ALL=(ALL) NOPASSWD: /usr/bin/calamares, /usr/sbin/calamares, /usr/bin/ointos-installer-prompt
+SUDO_EOF
+chmod 0440 /etc/sudoers.d/ointos-installer
+visudo -c 2>/dev/null || echo "OintOS: WARNING visudo check failed, continuing"
 
 update-initramfs -c -k all
 OINTOS_EOF

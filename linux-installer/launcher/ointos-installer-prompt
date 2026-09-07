@@ -18,14 +18,12 @@ if ! command -v calamares >/dev/null 2>&1; then
 fi
 
 # --- Preserve display env through sudo (Wayland/X11) -----------------------
-SUDO_ENV=(
-    "DISPLAY=${DISPLAY:-}"
-    "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"
-    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-}"
-    "QT_QPA_PLATFORMTHEME=${QT_QPA_PLATFORMTHEME:-}"
-    "XDG_CURRENT_DESKTOP=${XDG_CURRENT_DESKTOP:-}"
-    "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-}"
-)
+# Only pass vars that are actually set: passing an empty DISPLAY= would
+# blank the display for the root process and the GUI would never appear.
+SUDO_ENV=()
+for _v in DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR QT_QPA_PLATFORMTHEME XDG_CURRENT_DESKTOP DBUS_SESSION_BUS_ADDRESS; do
+    [ -n "${!_v:-}" ] && SUDO_ENV+=("$_v=${!_v}")
+done
 
 # --- Launch Calamares as root, preserving the graphics env -----------------
 # Calamares 3.3.x does NOT have --is-installer; it reads the installer mode
