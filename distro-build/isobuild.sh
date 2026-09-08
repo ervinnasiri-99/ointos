@@ -301,6 +301,11 @@ apt-get install -y --no-install-recommends \
 # and /etc/calamares/modules/*.conf with our own OintOS configs host-side.
 # `console-setup` = ships /usr/bin/ckbcomp (keyboard layout previews on
 # the keyboard page; there is no standalone `ckbcomp` package).
+# GRUB target pkgs (build20: grub-install died "modinfo.sh doesn't exist" —
+# live squashfs = rsync source, so target lacked /usr/lib/grub/x86_64-efi
+# too. -bin pkgs coexist; metapackages grub-efi-amd64/grub-pc conflict).
+# ponytail: no shim-signed/grub metapackage — Secure Boot + kernel-update
+# grub refresh on target come later.
 apt-get install -y --no-install-recommends \
     calamares \
     calamares-settings-kubuntu \
@@ -308,7 +313,12 @@ apt-get install -y --no-install-recommends \
     libkf6config-bin \
     console-setup \
     os-prober \
-    python3-yaml || apt-get install -y --no-install-recommends calamares calamares-settings-kubuntu calamares-data libkf6config-bin console-setup os-prober python3-yaml
+    grub-efi-amd64-bin \
+    grub-pc-bin \
+    grub-common \
+    grub2-common \
+    efibootmgr \
+    python3-yaml || apt-get install -y --no-install-recommends calamares calamares-settings-kubuntu calamares-data libkf6config-bin console-setup os-prober grub-efi-amd64-bin grub-pc-bin grub-common grub2-common efibootmgr python3-yaml
 
 # Set up locale + hostname + user
 sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen
