@@ -49,6 +49,7 @@ sudo -E env "${SUDO_ENV[@]}" calamares -c /etc/calamares -d 2>&1 | tee "$CALLOG"
     echo "--- calamares-root size ---"; du -sh /tmp/calamares-root-* 2>&1
     echo "--- dmesg ---"; dmesg | grep -i -E "squashfs|I/O error|read error|No space" | tail -15
     echo "--- rsync ---"; grep -n -i -A3 rsync "$CALLOG" | tail -20
+    echo "--- partition-jobs ---"; grep -n -E "CreatePartitionTable|CreatePartitionJob|SetPartFlags|mkfs|mkswap|partitionLayout|layoutApply" "$CALLOG" | head -40
     echo "--- mount/partition/ERROR ---"; grep -n -i -E "mount|no space|write failed|ERROR|calamares-root|Failed" "$CALLOG" | head -60
     echo "--- session.log root ---"; tail -50 /root/.cache/calamares/session.log 2>/dev/null || echo none
     echo "--- session.log user ---"; tail -50 ~/.cache/calamares/session.log 2>/dev/null || echo none

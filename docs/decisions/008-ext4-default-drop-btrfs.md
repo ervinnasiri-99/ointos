@@ -27,8 +27,9 @@ gone for good — including the Timeshift/`@` snapshot story (Phase 5).
 ## What changed (Layer 0)
 
 - `partition.conf`: `defaultFileSystemType: ext4`,
-  `availableFileSystemTypes: [ext4]`, swap choices +small/suspend,
-  default `suspend`.
+  `availableFileSystemTypes: [ext4]`, swap choices `[none, file]`
+  (Kubuntu resolute verbatim), default `file`. small/suspend create a
+  real swap partition; file = swapfile later, no partition.
 - `mount.conf`: deleted `btrfsSubvolumes`, `btrfsSwapSubvol`, btrfs/btrfs_swap
   `mountOptions`. Plain mounts only.
 - `shellprocess.conf`: dropped timeshift `mkdir` hook.

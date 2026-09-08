@@ -37,7 +37,7 @@ while true; do
         echo "--- cow/overlay ---"; mount | grep -E 'cow|overlay' || echo none
         echo "--- findmnt ---"; findmnt | grep -E 'calamares|cow|overlay|/dev/sd' || echo none
         echo "--- calamares-root size ---"; du -sh /tmp/calamares-root-* 2>&1
-        echo "--- cal-debug tail ---"; tail -15 "$CALLOG" 2>/dev/null || echo no-log-yet
+        echo "--- cal-debug tail ---"; tail -40 "$CALLOG" 2>/dev/null || echo no-log-yet
     } >> "$LOG" 2>&1
     sync
     sleep 30

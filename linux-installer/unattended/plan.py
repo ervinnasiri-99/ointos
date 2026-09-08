@@ -81,8 +81,8 @@ def build(plan, cal_conf="/etc/calamares"):
         "efiSystemPartition": "/boot/efi",
         "enableLuksAutomatedPartitioning": True,
         "luksGeneration": "luks2",
-        "userSwapChoices": ["none", "small", "suspend", "file"],
-        "initialSwapChoice": "suspend",
+        "userSwapChoices": ["none", "file"],
+        "initialSwapChoice": "file",
         "drawNestedPartitions": True,
         "alwaysShowPartitionLabels": True,
         "allowManualPartitioning": False,        # unattended
@@ -172,10 +172,13 @@ def build(plan, cal_conf="/etc/calamares"):
             {"id": "displaymanager", "module": "displaymanager", "config": "displaymanager.conf"},
             {"id": "bootloader", "module": "bootloader", "config": "bootloader.conf"},
             {"id": "shellprocess", "module": "shellprocess", "config": "shellprocess.conf"},
+            # rootcheck guard lives in the ISO image (shellprocess_rootcheck.conf,
+            # not overwritten here) — fail fast if / never mounted (build17).
+            {"id": "rootcheck", "module": "shellprocess", "config": "shellprocess_rootcheck.conf"},
         ],
         "sequence": [
             {"exec": [
-                "partition", "mount", "unpackfs", "machineid", "fstab",
+                "partition", "mount", "rootcheck", "unpackfs", "machineid", "fstab",
                 "locale", "keyboard", "localecfg", "users",
                 "displaymanager", "networkcfg", "hwclock", "grubcfg",
                 "bootloader", "shellprocess", "umount",

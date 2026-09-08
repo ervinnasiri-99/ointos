@@ -12,8 +12,8 @@ branded the way Kubuntu 26.04 does today:
 - launched from the live KDE session via a `kubuntu-installer-prompt`-style
   launcher
 - configured to unpack `/cdrom/casper/filesystem.squashfs` (our casper live
-  layout) with the distro-configurable `btrfsSubvolumes` layout
-  (`@`, `@home`, `@cache`, `@log`, `@swap`)
+  layout) with a plain ext4 target (decision 008 dropped the
+  `btrfsSubvolumes` `@`/`@home` layout + Timeshift story)
 
 ## Why Calamares (against OintOS's four hard requirements)
 
