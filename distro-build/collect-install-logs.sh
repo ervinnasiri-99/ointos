@@ -49,12 +49,14 @@ sudo -E env "${SUDO_ENV[@]}" calamares -c /etc/calamares -d 2>&1 | tee "$CALLOG"
     echo "--- calamares-root size ---"; du -sh /tmp/calamares-root-* 2>&1
     echo "--- dmesg ---"; dmesg | grep -i -E "squashfs|I/O error|read error|No space" | tail -15
     echo "--- rsync ---"; grep -n -i -A3 rsync "$CALLOG" | tail -20
-    echo "--- partition-jobs ---"; grep -n -E "CreatePartitionTable|CreatePartitionJob|SetPartFlags|mkfs|mkswap|partitionLayout|layoutApply" "$CALLOG" | head -40
+    echo "--- partition-jobs ---"; grep -n -E "ChoicePage|applyActionChoice|CreatePartitionTable|CreatePartitionJob|SetPartFlags|FillGlobalStorage|mountPoint|mkfs|mkswap|partitionLayout|layoutApply|Starting job" "$CALLOG" | head -120
     echo "--- mount/partition/ERROR ---"; grep -n -i -E "mount|no space|write failed|ERROR|calamares-root|Failed" "$CALLOG" | head -60
     echo "--- session.log root ---"; tail -50 /root/.cache/calamares/session.log 2>/dev/null || echo none
     echo "--- session.log user ---"; tail -50 ~/.cache/calamares/session.log 2>/dev/null || echo none
     echo "--- cal-debug tail ---"; tail -100 "$CALLOG"
 } >> "$OUT" 2>&1
 
+cp "$OUT" /mnt/evidence/ 2>/dev/null || true
+cp "$CALLOG" "/mnt/evidence/cal-debug-$(date +%Y%m%d-%H%M).log" 2>/dev/null || true
 echo "Bitti: $OUT"
 ls -la "$OUT"

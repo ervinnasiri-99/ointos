@@ -51,3 +51,12 @@ gone for good — including the Timeshift/`@` snapshot story (Phase 5).
   proving the mount chain.
 - Layer 1 (watchdog VDI evidence) ships with the same build; Layer 2
   (zstd squashfs, cow sizing, payload diet) only if ext4 still freezes.
+
+## Follow-up (build19)
+
+- Implicit default layout emitted ESP-only twice (suspend-swap: ESP+swap;
+  file-swap: ESP alone) → explicit `partitionLayout: rootfs/unknown///100%`
+  (EndeavourOS/Kicksecure pattern; `unknown` = defaultFileSystemType).
+- `shellprocess@rootcheck` (`mountpoint -q ${ROOT}`) fails fast pre-rsync.
+- Evidence VDI went `errors=remount-ro` (mkfs over automount) → umount
+  before/after mkfs in `watch-install.sh`; full logs copied to evidence.

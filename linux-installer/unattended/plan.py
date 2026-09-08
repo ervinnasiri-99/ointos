@@ -88,6 +88,9 @@ def build(plan, cal_conf="/etc/calamares"):
         "allowManualPartitioning": False,        # unattended
         "defaultFileSystemType": "ext4",
         "availableFileSystemTypes": ["ext4"],
+        # Explicit root layout (build19: implicit default emitted ESP-only).
+        "partitionLayout": [{"name": "rootfs", "filesystem": "unknown",
+                             "mountPoint": "/", "size": "100%"}],
     }
     write_conf(os.path.join(moddir, "partition.conf"), partition)
 

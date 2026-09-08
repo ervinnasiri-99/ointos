@@ -22,9 +22,14 @@ echo "--- lsblk (EVDEV=$EVDEV oldugunu dogrula) ---"
 lsblk -o NAME,SIZE,TYPE,MOUNTPOINT "$EVDEV" || { echo "ERROR: $EVDEV yok"; exit 1; }
 
 echo "--- evidence diski hazirlaniyor ---"
+# Onceki automount uzerine mkfs = RO remount + bos watch.log (build19).
+sudo umount "$EVDEV" 2>/dev/null || true
+sudo umount /run/media/oinstaller/* 2>/dev/null || true
 sudo mkfs.ext4 -F "$EVDEV" >/dev/null 2>&1
 sudo mkdir -p /mnt/evidence
 sudo mount "$EVDEV" /mnt/evidence
+sudo umount /run/media/oinstaller/* 2>/dev/null || true
+sudo mount -o remount,rw /mnt/evidence 2>/dev/null || true
 sudo chmod 777 /mnt/evidence
 
 echo "--- scriptler indiriliyor ---"

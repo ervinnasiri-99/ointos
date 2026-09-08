@@ -54,6 +54,12 @@ if [ -f /etc/calamares/settings.conf ]; then
 else
     fail "settings.conf not found"
 fi
+grep -q 'partitionLayout' /etc/calamares/modules/partition.conf 2>/dev/null \
+    && pass "partitionLayout present (explicit root)" \
+    || warn "partitionLayout MISSING — erase may emit ESP-only (build19)"
+grep -q 'shellprocess@rootcheck' /etc/calamares/settings.conf 2>/dev/null \
+    && pass "rootcheck guard wired (shellprocess@rootcheck)" \
+    || warn "rootcheck guard NOT wired"
 echo "  --- /etc/calamares/modules/ (Calamares ONLY looks here + /usr/share/.../modules) ---"
 ls /etc/calamares/modules/ 2>/dev/null || fail "modules/ dir missing"
 for _m in welcome locale keyboard partition users summary mount unpackfs displaymanager bootloader shellprocess shellprocess_rootcheck finished machineid fstab localecfg networkcfg hwclock grubcfg umount; do
