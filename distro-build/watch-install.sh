@@ -38,5 +38,10 @@ CALLOG=/tmp/cal-debug.log nohup bash /tmp/install-watchdog.sh >/dev/null 2>&1 &
 sleep 1
 tail -2 /mnt/evidence/watch.log 2>/dev/null || echo "(ilk tur henuz yazilmadi)"
 
+# Stale swap (onceki testin sda2'si) live'da aktif kalirsa erase bloklanir
+# (log: "Can not resize /dev/sda2, partition is mounted", erase-action yok).
+echo "--- stale swap kapatiliyor ---"
+sudo swapoff -a 2>/dev/null || true
+
 echo "--- installer aciliyor ---"
 bash /tmp/collect-install-logs.sh

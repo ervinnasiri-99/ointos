@@ -178,7 +178,7 @@ def build(plan, cal_conf="/etc/calamares"):
         ],
         "sequence": [
             {"exec": [
-                "partition", "mount", "rootcheck", "unpackfs", "machineid", "fstab",
+                "partition", "mount", "shellprocess@rootcheck", "unpackfs", "machineid", "fstab",
                 "locale", "keyboard", "localecfg", "users",
                 "displaymanager", "networkcfg", "hwclock", "grubcfg",
                 "bootloader", "shellprocess", "umount",
