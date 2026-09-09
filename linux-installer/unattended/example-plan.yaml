@@ -1,7 +1,7 @@
 # OintOS unattended install plan (subiquity-shaped for Libertix handoff)
 # Example: full-disk ext4 install (decision 008: btrfs dropped) + late command.
 identity:
-  username: oinstaller
+  username: ervin
   hostname: ointos
 storage:
   disk: /dev/sda

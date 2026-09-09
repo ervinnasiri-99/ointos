@@ -108,7 +108,8 @@ R dpkg -l 2>/dev/null | grep -qE "^ii[[:space:]]+calamares" && fail "calamares p
 
 # ---------------------------------------------------------------------------
 h "G. Installer artifacts"
-[ -f "${R_ROOT}/etc/ointos-installed" ] && pass "/etc/ointos-installed marker present (late-command)" || warn "no /etc/ointos-installed (unattended late-command marker)"
+[ -f "${R_ROOT}/etc/ointos-installed" ] && pass "/etc/ointos-installed marker present" || fail "no /etc/ointos-installed (both paths must write it)"
+[ -f "${R_ROOT}/usr/local/bin/ointos-unattended-plan" ] && pass "unattended plan driver shipped in live image" || warn "no /usr/local/bin/ointos-unattended-plan (pre-Phase-7 ISO?)"
 
 # ---------------------------------------------------------------------------
 echo ""

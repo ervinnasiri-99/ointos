@@ -688,6 +688,19 @@ if [ -f /workspace/linux-installer/launcher/ointos-installer-prompt ]; then
         "$CHROOT_DIR/usr/bin/ointos-installer-prompt"
     chmod +x "$CHROOT_DIR/usr/bin/ointos-installer-prompt"
 fi
+# Phase 7: unattended plan driver ships in the live image (Windows handoff).
+if [ -f /workspace/linux-installer/unattended/plan.py ]; then
+    echo "OintOS: installing unattended plan driver"
+    mkdir -p "$CHROOT_DIR/usr/local/bin"
+    cp /workspace/linux-installer/unattended/plan.py \
+        "$CHROOT_DIR/usr/local/bin/ointos-unattended-plan"
+    chmod +x "$CHROOT_DIR/usr/local/bin/ointos-unattended-plan"
+    mkdir -p "$CHROOT_DIR/usr/share/doc/ointos"
+    cp /workspace/linux-installer/unattended/example-plan.yaml \
+        "$CHROOT_DIR/usr/share/doc/ointos/example-plan.yaml" 2>/dev/null || true
+    cp /workspace/linux-installer/unattended/example-plan-v3.json \
+        "$CHROOT_DIR/usr/share/doc/ointos/example-plan-v3.json" 2>/dev/null || true
+fi
 
 wrapup_chroot "$CHROOT_DIR"
 

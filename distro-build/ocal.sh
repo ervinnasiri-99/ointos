@@ -68,7 +68,7 @@ else
 fi
 echo "  --- /etc/calamares/modules/ (Calamares ONLY looks here + /usr/share/.../modules) ---"
 ls /etc/calamares/modules/ 2>/dev/null || fail "modules/ dir missing"
-for _m in welcome locale keyboard partition users summary mount unpackfs displaymanager bootloader shellprocess shellprocess_rootcheck finished machineid fstab localecfg networkcfg hwclock grubcfg umount; do
+for _m in welcome locale keyboard partition users summary mount unpackfs displaymanager bootloader shellprocess shellprocess_rootcheck finished machineid fstab localecfg networkcfg hwclock grubcfg umount locale keyboard; do
     [ -f "/etc/calamares/modules/$_m.conf" ] || [ -f "/usr/share/calamares/modules/$_m.conf" ] \
         && pass "$_m.conf found" || warn "$_m.conf missing (OK only for summary/finished + job modules needing no conf)"
 done

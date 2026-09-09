@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 3,
+  "planId": "00000000000000000000000000000000",
+  "createdAtUtc": "2026-09-10T00:00:00Z",
+  "firmware": "uefi",
+  "distribution": {
+    "id": "ointos",
+    "name": "OintOS",
+    "osReleaseId": "ubuntu",
+    "grubDisplayName": "OintOS",
+    "grubIcon": "ointos",
+    "secureBootMicrosoftAuthorities": [],
+    "installerIsoFileName": "OintOS-1.0-amd64.iso",
+    "installerIsoUrl": "",
+    "installerIsoWindowsPath": "C:\\ointos\\OintOS-1.0-amd64.iso",
+    "installerIsoSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "liveIsoUrl": "",
+    "liveIsoSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "locale": {
+    "languageCode": "en",
+    "systemLanguage": "en_US.UTF-8",
+    "keyboardLayout": "tr",
+    "keyboardVariant": "",
+    "keyboardModel": "pc105",
+    "timezone": "Europe/Istanbul"
+  },
+  "account": {
+    "username": "ervin",
+    "passwordHashWindowsPath": "C:\\ointos\\secret\\pw",
+    "computerName": "ointos"
+  },
+  "disk": {
+    "number": 0,
+    "uniqueId": "test-disk",
+    "partitionTableId": "gpt:00000000-0000-0000-0000-000000000000",
+    "sizeBytes": 21474836480,
+    "logicalSectorSizeBytes": 512,
+    "partitionStyle": "GPT",
+    "systemDrive": "C:",
+    "windows": {"number": 1, "offsetBytes": 1048576, "sizeBytes": 104857600},
+    "boot": {"number": 1, "offsetBytes": 1048576, "sizeBytes": 104857600},
+    "recovery": {"number": 1, "offsetBytes": 1048576, "sizeBytes": 104857600},
+    "installer": {
+      "number": null,
+      "offsetBytes": null,
+      "finalOffsetBytes": 1073741824,
+      "resizeMode": "live-offline",
+      "finalSizeBytes": 21474836480,
+      "stagingSizeBytes": 1073741824
+    }
+  },
+  "features": {
+    "shareWindowsFilesInLinux": false,
+    "shareLinuxFilesInWindows": false,
+    "windowsProfilesJsonBase64": "e30="
+  },
+  "runtime": {
+    "windowsBitLockerState": "FullyDecrypted",
+    "lowMemoryMode": false,
+    "bootStrategy": "uefi-boot-next",
+    "secureBootEnabled": false,
+    "trustedMicrosoftUefiAuthorities": [],
+    "recoveryRootWindows": null,
+    "recoveryRunId": null
+  },
+  "development": null
+}
