@@ -375,7 +375,7 @@ def build(plan, cal_conf="/etc/calamares", windows_root=None):
          "timeout": 60},
         {"command": "touch /etc/ointos-installed",
          "timeout": 60},
-        {"command": "rm -f /etc/sddm.conf.d/autologin.conf /usr/bin/ointos-installer-prompt /usr/share/applications/ointos-installer.desktop /usr/share/applications/calamares.desktop /usr/share/applications/*kubuntu*.desktop /etc/xdg/autostart/ointos-installer.desktop /etc/xdg/autostart/*calamares*.desktop /etc/xdg/autostart/*kubuntu*.desktop /etc/sudoers.d/ointos-installer",
+        {"command": "rm -f /etc/sddm.conf.d/autologin.conf /usr/bin/ointos-installer-prompt /usr/local/bin/ointos-unattended-plan /usr/share/doc/ointos/example-plan.yaml /usr/share/doc/ointos/example-plan-v3.json /usr/share/applications/ointos-installer.desktop /usr/share/applications/calamares.desktop /usr/share/applications/*kubuntu*.desktop /etc/xdg/autostart/ointos-installer.desktop /etc/xdg/autostart/*calamares*.desktop /etc/xdg/autostart/*kubuntu*.desktop /etc/sudoers.d/ointos-installer",
          "timeout": 60},
         {"command": "rm -rf /usr/share/calamares /etc/calamares /home/oinstaller/Desktop/Install*.desktop /root/Desktop/Install*.desktop /home/*/Desktop/Install*.desktop /etc/skel/Desktop/Install*.desktop",
          "timeout": 60},

@@ -92,10 +92,33 @@ else
     warn "plasma config not found"
 fi
 
+h "5b. Wallpaper defaults for installed user (017/018)"
+grep -q "OintOS" /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc 2>/dev/null \
+    && pass "/etc/skel seeds desktop wallpaper" \
+    || fail "/etc/skel missing wallpaper (installed user gets default breeze)"
+grep -q "OintOSWallpaper" /etc/skel/.config/kscreenlockerrc 2>/dev/null \
+    && pass "/etc/skel seeds lock-screen wallpaper" \
+    || fail "/etc/skel missing kscreenlockerrc"
+grep -qE "^background=.*OintOSWallpaper" /usr/share/sddm/themes/breeze/theme.conf.user 2>/dev/null \
+    && grep -q "^type=image" /usr/share/sddm/themes/breeze/theme.conf.user 2>/dev/null \
+    && pass "SDDM breeze login wallpaper set" \
+    || fail "SDDM theme.conf.user missing/wrong (login screen not branded)"
+
 h "6. Systemd wallpaper service"
 systemctl --user status ointos-wallpaper.service 2>&1 | head -5 || warn "service not found"
 ls -la /etc/systemd/user/graphical-session.target.wants/ointos-wallpaper.service 2>/dev/null \
     && pass "service enabled system-wide" || warn "service not enabled system-wide"
+
+h "6b. Unattended plan driver (019/020)"
+[ -x /usr/local/bin/ointos-unattended-plan ] \
+    && pass "ointos-unattended-plan shipped" \
+    || fail "plan driver missing from live image"
+[ -f /usr/share/doc/ointos/example-plan-v3.json ] \
+    && pass "example-plan-v3.json shipped" \
+    || warn "no example v3 plan (pre-019 ISO?)"
+python3 -c "import platform; ids={platform.freedesktop_os_release()['ID']}|set(platform.freedesktop_os_release().get('ID_LIKE','').split()); assert 'debian' in ids" 2>/dev/null \
+    && pass "os-release ID_LIKE carries debian (apport safe)" \
+    || fail "ID_LIKE lacks debian (apport crashes hide tracebacks)"
 
 h "7. Snap check"
 dpkg -l snapd 2>/dev/null | grep -q ^ii && fail "snapd STILL installed" || pass "no snapd"
