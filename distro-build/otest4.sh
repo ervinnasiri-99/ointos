@@ -79,9 +79,28 @@ h "E. No snapd / APT-first"
 R dpkg -l snapd 2>/dev/null | grep -q ^ii && fail "snapd present (should be absent)" || pass "no snapd"
 
 # ---------------------------------------------------------------------------
-h "F. Installer artifacts"
+h "F. No installer leftovers on installed system (build22)"
+_LEFTOVER=0
+for _f in usr/bin/ointos-installer-prompt \
+         usr/share/applications/ointos-installer.desktop \
+         usr/share/applications/calamares.desktop \
+         etc/xdg/autostart/ointos-installer.desktop \
+         etc/sudoers.d/ointos-installer \
+         etc/calamares \
+         usr/share/calamares; do
+    if [ -e "${R_ROOT}/${_f}" ]; then fail "installer leftover '/${_f}' present"; _LEFTOVER=1; fi
+done
+[ "$_LEFTOVER" -eq 0 ] && pass "no installer leftovers"
+if ls "${R_ROOT}"/usr/share/applications/*kubuntu*.desktop "${R_ROOT}"/usr/share/applications/*Kubuntu*.desktop "${R_ROOT}"/home/*/Desktop/Install*.desktop 2>/dev/null | grep -q .; then
+    fail "kubuntu/installer .desktop leftovers present"
+else
+    pass "no kubuntu/installer .desktop leftovers"
+fi
+R dpkg -l 2>/dev/null | grep -qE "^ii[[:space:]]+calamares" && fail "calamares package on target (should be purged)" || pass "no calamares package"
+
+# ---------------------------------------------------------------------------
+h "G. Installer artifacts"
 [ -f "${R_ROOT}/etc/ointos-installed" ] && pass "/etc/ointos-installed marker present (late-command)" || warn "no /etc/ointos-installed (unattended late-command marker)"
-[ -d "${R_ROOT}/etc/calamares" ] && pass "/etc/calamares config present" || warn "no /etc/calamares (installed from live image - not target)"
 
 # ---------------------------------------------------------------------------
 echo ""

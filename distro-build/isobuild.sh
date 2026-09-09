@@ -622,10 +622,10 @@ if [ -d /workspace/linux-installer/calamares-settings-ointos ]; then
     mkdir -p "$CHROOT_DIR/etc/calamares/branding/ointos"
     cp -r /workspace/linux-installer/calamares-settings-ointos/branding/. \
         "$CHROOT_DIR/etc/calamares/branding/ointos/"
-    # landing logo
-    if [ -f /workspace/branding/Oint.png ]; then
+    # landing logo (transparent variant — opaque Oint.png boxes on sidebar)
+    if [ -f "/workspace/branding/Oint(Transparent).png" ]; then
         mkdir -p "$CHROOT_DIR/usr/share/calamares/branding/ointos/img"
-        cp /workspace/branding/Oint.png \
+        cp "/workspace/branding/Oint(Transparent).png" \
             "$CHROOT_DIR/usr/share/calamares/branding/ointos/img/logo.png"
     fi
     # CRITICAL: Calamares 3.3.x looks for QML in /etc/calamares/qml/ when
@@ -776,6 +776,15 @@ Icon=/usr/share/calamares/branding/ointos/img/logo.png
 Terminal=false
 Categories=System;
 DESK_EOF
+# Kubuntu leftovers come from debs (calamares upstream desktop +
+# calamares-settings-kubuntu branding/desktop/autostart). Our overwrite never
+# rm's them, so live shows "Install Kubuntu" next to ours. Live = OintOS only.
+rm -f /usr/share/applications/calamares.desktop
+rm -f /usr/share/applications/*kubuntu*.desktop /usr/share/applications/*Kubuntu*.desktop
+rm -f /etc/xdg/autostart/*calamares*.desktop /etc/xdg/autostart/*kubuntu*.desktop /etc/xdg/autostart/*Kubuntu*.desktop
+rm -rf /usr/share/calamares/branding/kubuntu /etc/calamares/branding/kubuntu
+rm -f /home/oinstaller/Desktop/Install*Kubuntu*.desktop /home/oinstaller/Desktop/Install*System*.desktop
+dpkg -L calamares calamares-settings-kubuntu 2>/dev/null | grep -E 'desktop|autostart|branding/kubuntu' || true
 mkdir -p /home/oinstaller/Desktop
 cp /usr/share/applications/ointos-installer.desktop "/home/oinstaller/Desktop/Install OintOS.desktop"
 chmod +x "/home/oinstaller/Desktop/Install OintOS.desktop"

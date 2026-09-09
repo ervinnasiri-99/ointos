@@ -28,10 +28,10 @@ done
 mkdir -p /usr/share/calamares/branding/ointos
 cp -r "$SRC/branding/." /usr/share/calamares/branding/ointos/
 
-# 3. Landing logo (from OintOS branding if present at build, else skip)
-if [ -f /workspace/branding/Oint.png ]; then
+# 3. Landing logo (transparent variant — opaque boxes on sidebar)
+if [ -f "/workspace/branding/Oint(Transparent).png" ]; then
     mkdir -p /usr/share/calamares/branding/ointos/img
-    cp /workspace/branding/Oint.png /usr/share/calamares/branding/ointos/img/logo.png
+    cp "/workspace/branding/Oint(Transparent).png" /usr/share/calamares/branding/ointos/img/logo.png
 fi
 
 echo "OintOS Calamares settings installed."

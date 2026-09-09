@@ -73,6 +73,16 @@ for _m in welcome locale keyboard partition users summary mount unpackfs display
         && pass "$_m.conf found" || warn "$_m.conf missing (OK only for summary/finished + job modules needing no conf)"
 done
 
+h "4b. Live entries: OintOS only (build22 gate)"
+if ls /usr/share/applications/*kubuntu*.desktop /usr/share/applications/*Kubuntu*.desktop /usr/share/applications/calamares.desktop /etc/xdg/autostart/*calamares*.desktop /etc/xdg/autostart/*kubuntu*.desktop 2>/dev/null | grep -q .; then
+    fail "kubuntu/calamares installer entries present in live session"
+else
+    pass "live session has OintOS installer only"
+fi
+file /usr/share/calamares/branding/ointos/img/logo.png /etc/calamares/branding/ointos/img/logo.png 2>/dev/null | grep -qi 'rgba\|alpha' \
+    && pass "installer logo has transparency (RGBA)" \
+    || fail "installer logo NOT transparent (opaque PNG)"
+
 h "5. Wallpaper"
 CFG="/home/oinstaller/.config/plasma-org.kde.plasma.desktop-appletsrc"
 if [ -f "$CFG" ]; then
