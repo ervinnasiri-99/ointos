@@ -16,7 +16,7 @@ its configs from a plan.
 
 Plan schema (subiquity-flavored for Libertix), e.g.:
     identity:
-        username: oinstaller
+        username: ervin
         hostname: ointos
     storage:
         disk: /dev/sda
@@ -124,13 +124,20 @@ def build(plan, cal_conf="/etc/calamares"):
         "sudoersGroup": "sudo",
         "autologinGroup": "autologin",
         "defaultGroups": ["adm", "cdrom", "dip", "lpadmin", "plugdev",
-                          {"name": "sambashare", "must_exist": False,
-                           "system": True}, "sudo"],
+                          "sambashare", "sudo"],
         "passwordRequirements": {"minLength": 1, "maxLength": -1},
-        "user": {"shell": "/bin/bash", "forbidden_names": ["root"]},
+        "user": {"shell": "/bin/bash",
+                 "forbidden_names": ["root", "oinstaller"]},
+        # Upstream users module reads the login ONLY from presets
+        # (Config.cpp updateGSAutoLogin(loginName); top-level autologinUser
+        # does not exist). Empty/missing preset -> createJobs() returns [],
+        # SetupGroupsJob/CreateUserJob never run, live user kept.
+        "presets": {
+            "fullname": {"value": ident.get("fullname",
+                                            ident.get("username", ""))},
+            "loginName": {"value": ident.get("username", "")},
+        },
     }
-    if ident.get("username"):
-        users["autologinUser"] = ident["username"]
     write_conf(os.path.join(moddir, "users.conf"), users)
 
     # --- bootloader.conf --------------------------------------------------
@@ -150,8 +157,22 @@ def build(plan, cal_conf="/etc/calamares"):
     # --- shellprocess.conf (late commands) --------------------------------
     # Key is `script:` (list) NOT `scripts:` — with `scripts:` the module
     # loads but runs nothing. Leading "-" on a command ignores its failure.
+    # Mirror the interactive shellprocess.conf fixes (015): strip casper so
+    # the target initramfs stops probing /dev/sr0, drop live-user leftovers.
+    # Runs chrooted (dontChroot False), same as interactive.
     late = [
-        {"command": "-chroot ${ROOT} update-grub", "timeout": 300}
+        {"command": "-apt-get purge -y casper", "timeout": 300},
+        {"command": "rm -f /etc/initramfs-tools/conf.d/casperize.conf /etc/casper.conf; update-initramfs -u",
+         "timeout": 300},
+        {"command": "if [ \"$(ls /home 2>/dev/null | grep -v lost+found | wc -l)\" -gt 1 ]; then userdel -r oinstaller 2>/dev/null || rm -rf /home/oinstaller; fi",
+         "timeout": 60},
+        {"command": "-update-grub", "timeout": 300},
+        {"command": "rm -f /etc/sddm.conf.d/autologin.conf /usr/bin/ointos-installer-prompt /usr/share/applications/ointos-installer.desktop /usr/share/applications/calamares.desktop /usr/share/applications/*kubuntu*.desktop /etc/xdg/autostart/ointos-installer.desktop /etc/xdg/autostart/*calamares*.desktop /etc/xdg/autostart/*kubuntu*.desktop /etc/sudoers.d/ointos-installer",
+         "timeout": 60},
+        {"command": "rm -rf /usr/share/calamares /etc/calamares /home/oinstaller/Desktop/Install*.desktop /root/Desktop/Install*.desktop /home/*/Desktop/Install*.desktop /etc/skel/Desktop/Install*.desktop",
+         "timeout": 60},
+        {"command": "-apt-get purge -y calamares calamares-settings-kubuntu calamares-settings-ubuntu-common calamares-data; apt-get autoremove --purge -y",
+         "timeout": 300},
     ]
     for cmd in plan.get("late_commands", []):
         late.append({"command": cmd, "timeout": 300})
