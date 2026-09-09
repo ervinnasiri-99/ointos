@@ -576,6 +576,29 @@ PLASMA_EOF
     cp "$CHROOT_DIR/home/oinstaller/.config/plasma-org.kde.plasma.desktop-appletsrc" \
        "$CHROOT_DIR/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc"
 
+    # --- Lock screen: does NOT follow desktop wallpaper (kscreenlocker reads
+    # only kscreenlockerrc [Greeter][Wallpaper], never the desktop appletsrc).
+    # Seed same default for live user + /etc/skel (fresh install-time user).
+    for _home in "$CHROOT_DIR/home/oinstaller" "$CHROOT_DIR/etc/skel"; do
+        mkdir -p "$_home/.config"
+        cat > "$_home/.config/kscreenlockerrc" <<'LOCKEOF'
+[Greeter]
+WallpaperPlugin=org.kde.image
+
+[Greeter][Wallpaper][org.kde.image][General]
+Image=file:///usr/share/wallpapers/OintOS/OintOSWallpaper.png
+LOCKEOF
+    done
+    chown -R 1000:1000 "$CHROOT_DIR/home/oinstaller/.config"
+
+    # --- SDDM login screen: breeze reads theme.conf.user override.
+    mkdir -p "$CHROOT_DIR/usr/share/sddm/themes/breeze"
+    cat > "$CHROOT_DIR/usr/share/sddm/themes/breeze/theme.conf.user" <<'SDDMEOF'
+[General]
+background=/usr/share/wallpapers/OintOS/OintOSWallpaper.png
+type=image
+SDDMEOF
+
     # Wallpaper: systemd user service that runs plasma-apply-wallpaperimage
     # after the desktop session starts. This is the CONFIRMED WORKING approach
     # for KDE 6 multi-user setups (KDE docs + NixOS + enterprise thin clients).
