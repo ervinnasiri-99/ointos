@@ -193,7 +193,12 @@ VERSION_ID="${OINTOS_VERSION}"
 VERSION="${OINTOS_VERSION} (Resolute Raccoon)"
 VERSION_CODENAME=resolute
 ID=ointos
-ID_LIKE=ubuntu
+# Mint precedent (ID=linuxmint + ID_LIKE="ubuntu debian"): own ID for
+# branding, both parents listed. apport reads freedesktop_os_release and
+# needs "debian" in {ID}+ID_LIKE — without it EVERY python traceback dies
+# inside apport's excepthook, burying the real error. ubuntu first =
+# closest parent wins for first-match tools.
+ID_LIKE="ubuntu debian"
 HOME_URL="https://github.com/ervinnasiri-99/ointos"
 BUG_REPORT_URL="https://github.com/ervinnasiri-99/ointos/issues"
 OS_RELEASE_EOF

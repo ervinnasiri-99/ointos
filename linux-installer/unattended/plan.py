@@ -120,7 +120,10 @@ def _normalize(plan):
     runtime = plan.get("runtime", {})
 
     os_id = distribution.get("osReleaseId", "")
-    if os_id and os_id != "ubuntu":
+    # Accept our own ID too: live image writes ID=ointos (+ID_LIKE ubuntu
+    # debian) — rejecting it would refuse our own ISO (Libertix
+    # assert_target_distribution_identity allows ID + ID_LIKE family).
+    if os_id and os_id not in ("ubuntu", "ointos"):
         raise ValueError(f"distribution.osReleaseId {os_id!r} is not ubuntu")
     if runtime.get("secureBootEnabled"):
         raise ValueError("secureBootEnabled=true refused: no signed shim "
@@ -182,8 +185,10 @@ def _read_password_hash(ident, windows_root):
     src = _resolve_windows_path(ident.get("passwordHashWindowsPath", ""),
                                 windows_root)
     if not src or not os.path.isfile(src):
-        raise ValueError("password hash file missing from Windows "
-                         "(decrypt/suspend + retry)")
+        raise ValueError("password hash file missing: mount Windows at "
+                         "--windows-root (e.g. /mnt/windows) so "
+                         f"{ident.get('passwordHashWindowsPath', '')!r} "
+                         "resolves")
     with open(src) as fh:
         h = fh.read().strip()
     if not h.startswith("$6$") or any(c in h for c in "\r\n\t"):
