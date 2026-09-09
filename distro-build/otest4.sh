@@ -51,8 +51,16 @@ h "B. Bootloader (GRUB + os-prober)"
 [ -n "$(ls "${R_ROOT}/boot/grub" 2>/dev/null)" ] && pass "GRUB files present" || warn "no /boot/grub installed"
 R command -v grub-install >/dev/null 2>&1 && pass "grub-install binary present" || warn "no grub-install"
 R dpkg -l 2>/dev/null | grep -qE "^ii[[:space:]]+os-prober" && pass "os-prober installed (dual-boot)" || warn "os-prober not present"
-# EFI dir if booted UEFI
-[ -d "${R_ROOT}/EFI" ] && pass "EFI dir present" || warn "no /EFI dir (BIOS install is fine)"
+# UEFI check: /sys/firmware/efi exists only on UEFI boot (runtime check,
+# not chrooted). The ESP mounts at /boot/efi, so its dir is /boot/efi/EFI
+# — the old check looked at /EFI (filesystem root), which never exists.
+if [ -d /sys/firmware/efi ]; then
+    [ -d "${R_ROOT}/boot/efi/EFI" ] \
+        && pass "UEFI boot + ESP mounted (/boot/efi/EFI)" \
+        || fail "UEFI boot but no /boot/efi/EFI (ESP not mounted?)"
+else
+    warn "booted in BIOS mode (/sys/firmware/efi absent)"
+fi
 # update-grub output check (chroot only)
 if [ "$ROOT" != "/" ]; then
     R update-grub >/dev/null 2>&1 && pass "update-grub runs" || warn "update-grub failed in target"

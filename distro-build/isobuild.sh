@@ -568,6 +568,14 @@ PLASMA_EOF
     '
     chown -R 1000:1000 "$CHROOT_DIR/home/oinstaller/.config"
 
+    # --- /etc/skel seed: Calamares creates the install-time user fresh
+    # (empty home from useradd), so the /home/oinstaller config above never
+    # reaches them. useradd copies /etc/skel -> new home, so seed the same
+    # appletsrc there. "Default only": user changes overwrite their own copy.
+    mkdir -p "$CHROOT_DIR/etc/skel/.config"
+    cp "$CHROOT_DIR/home/oinstaller/.config/plasma-org.kde.plasma.desktop-appletsrc" \
+       "$CHROOT_DIR/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc"
+
     # Wallpaper: systemd user service that runs plasma-apply-wallpaperimage
     # after the desktop session starts. This is the CONFIRMED WORKING approach
     # for KDE 6 multi-user setups (KDE docs + NixOS + enterprise thin clients).
@@ -585,7 +593,7 @@ After=graphical-session.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/plasma-apply-wallpaperimage /usr/share/wallpapers/OintOS/OintOSWallpaper.png
+ExecStart=/bin/sh -c 'test -f "$HOME/.config/ointos-wallpaper.done" || { /usr/bin/plasma-apply-wallpaperimage /usr/share/wallpapers/OintOS/OintOSWallpaper.png && mkdir -p "$HOME/.config" && touch "$HOME/.config/ointos-wallpaper.done"; }'
 RemainAfterExit=yes
 
 [Install]
