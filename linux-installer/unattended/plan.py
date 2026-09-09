@@ -331,20 +331,21 @@ def build(plan, cal_conf="/etc/calamares", windows_root=None):
     write_conf(os.path.join(moddir, "bootloader.conf"), bootloader)
 
     # --- locale.conf / keyboard.conf (Libertix configure_locale/keyboard) --
+    # locale.schema.yaml: ONLY region/zone (+geoip/useSystemTimezone...).
+    # Extra keys (locale/language) are REJECTED (additionalProperties:false).
+    # Keyboard layout itself comes from the keyboard PAGE/globalstorage —
+    # keyboard.conf only tunes WHERE it is written (xorg path, localed,
+    # kwin/gnome flags). So: preseed region/zone + mirror interactive
+    # keyboard.conf verbatim, real layout via late-command files below.
+    _tz = loc.get("timezone", "America/New_York")
+    _region, _, _zone = _tz.partition("/")
     write_conf(os.path.join(moddir, "locale.conf"),
-               {"region": loc.get("timezone", "America/New_York").split(
-                    "/")[0],
-                "zone": loc.get("timezone",
-                                "America/New_York").split("/", 1)[1]
-                if "/" in loc.get("timezone", "America/New_York") else "",
-                "locale": loc.get("systemLanguage", "en_US.UTF-8"),
-                "language": loc.get("languageCode", "en")})
+               {"region": _region or "America",
+                "zone": _zone or "New_York"})
     write_conf(os.path.join(moddir, "keyboard.conf"),
                {"xOrgConfFileName": "/etc/X11/xorg.conf.d/00-keyboard.conf",
                 "convertedKeymapPath": "/lib/kbd/keymaps/xkb",
-                "layout": loc.get("keyboardLayout", "us"),
-                "variant": loc.get("keyboardVariant", ""),
-                "model": loc.get("keyboardModel", "pc105")})
+                "configure": {"kwin": False, "gnome": False}})
 
     # --- shellprocess.conf (late commands) --------------------------------
     # Key is `script:` (list) NOT `scripts:` — with `scripts:` the module
@@ -458,11 +459,15 @@ def main(argv=None):
                          "resolution (e.g. /mnt/windows)")
     args = ap.parse_args(argv)
 
-    if not args.plan or args.staging:
-        # Windows handoff: discover the staging plan (no file given).
-        args.plan = find_staging_plan(args.staging)
-        print(f"Using staging plan: {args.plan}")
-    plan = load_plan(args.plan)
+    try:
+        if not args.plan or args.staging:
+            # Windows handoff: discover the staging plan (no file given).
+            args.plan = find_staging_plan(args.staging)
+            print(f"Using staging plan: {args.plan}")
+        plan = load_plan(args.plan)
+    except (ValueError, OSError) as e:
+        print(f"FATAL: {e}", file=sys.stderr)
+        return 2
     # planId match: plan/state pair must agree (same as live-context.sh).
     sib = os.path.join(os.path.dirname(args.plan),
                        os.path.basename(args.plan).replace(
