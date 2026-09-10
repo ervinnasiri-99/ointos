@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "producer": "New-OIntOSStaging.ps1",
+  "planSchemaVersion": 3,
+
+  "volumeLabels": {
+    "staging": "OINTOSSTG"
+  },
+  "staging": {
+    "filesystem": "FAT32",
+    "files": ["installation-plan.json", "installation-state.json", "ointos.iso", "ointos-iso.sha256"]
+  },
+
+  "guardrails": {
+    "firmware": "uefi",
+    "partitionStyle": "GPT",
+    "targetFilesystem": "ext4",
+    "secureBootMustBeOff": true,
+    "bitLockerMustBeDecrypted": true
+  },
+
+  "account": {
+    "reservedUsernames": ["root", "oinstaller", "daemon", "bin", "sys", "sync",
+      "games", "man", "lp", "mail", "news", "uucp", "proxy", "www-data",
+      "backup", "nobody", "admin", "administrator"]
+  },
+
+  "passwordHash": {
+    "format": "$6$rounds=5000$salt$hash",
+    "note": "crypt-sha512, same rules as libertix-install-main.sh validates live-side"
+  },
+
+  "distribution": {
+    "allowedOsReleaseIds": ["ubuntu", "ointos"]
+  },
+
+  "locale": {
+    "note": "region/zone only in locale.conf; keyboard layout applied via files, not keyboard.conf"
+  },
+
+  "disk": {
+    "note": "Calamares owns partitioning; plan never resizes. GPT/UEFI or MBR/BIOS consistency checked only."
+  }
+}

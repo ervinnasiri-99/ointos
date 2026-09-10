@@ -1,0 +1,10 @@
+# OintOS ISO catalog — pinned sha256 for the staging producer.
+#
+# The producer (New-OIntOSStaging.ps1) downloads the ISO from ISO_URL,
+# verifies Get-FileHash against ISO_SHA256, and REFUSES on mismatch.
+# Update both lines together when a new build is released; never bump
+# the URL without the hash (fail-closed, same rule as plan.py).
+#
+# PLACEHOLDER — fill in after the next batched ISO build lands:
+ISO_URL=https://example.invalid/ointos/ointos-26.04-amd64.iso
+ISO_SHA256=REPLACE_WITH_SHA256_OF_RELEASED_ISO

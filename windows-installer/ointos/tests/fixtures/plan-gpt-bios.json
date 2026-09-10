@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 3,
+  "planId": "33333333-3333-3333-3333-333333333333",
+  "firmware": "bios",
+  "distribution": {"osReleaseId": "ointos"},
+  "locale": {},
+  "account": {"username": "ervin"},
+  "disk": {"partitionStyle": "GPT"},
+  "features": {},
+  "runtime": {}
+}

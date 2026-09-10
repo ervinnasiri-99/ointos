@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 3,
+  "planId": "11111111-1111-1111-1111-111111111111",
+  "firmware": "uefi",
+  "distribution": {"osReleaseId": "ointos"},
+  "locale": {},
+  "account": {"username": "ervin", "computerName": "ointos-pc",
+              "passwordHashWindowsPath": "E:\\password-hash.txt"},
+  "disk": {"partitionStyle": "GPT"},
+  "features": {},
+  "runtime": {}
+}

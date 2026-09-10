@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "planId": "11111111-1111-1111-1111-111111111111",
+  "createdUtc": "2026-09-10T00:00:00Z",
+  "producer": "New-OIntOSStaging.ps1"
+}

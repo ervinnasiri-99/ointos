@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 3,
+  "planId": "22222222-2222-2222-2222-222222222222",
+  "firmware": "uefi",
+  "distribution": {"osReleaseId": "ointos"},
+  "locale": {},
+  "account": {"username": "ervin"},
+  "disk": {"partitionStyle": "GPT"},
+  "features": {},
+  "runtime": {"secureBootEnabled": true}
+}
