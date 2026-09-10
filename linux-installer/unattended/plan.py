@@ -138,6 +138,28 @@ def _normalize(plan):
         raise ValueError(f"refusing install with BitLocker state "
                          f"{bl_state!r}: decrypt/suspend first")
 
+    # storage.* the unattended path cannot honor (Calamares owns
+    # partitioning; ext4 + GPT/UEFI-or-MBR/BIOS only, decision 008).
+    for _k in ("filesystem", "luks", "encryption", "luksPassphrase",
+               "subvolumes", "btrfsSubvolumes"):
+        if disk.get(_k) not in (None, "", False, [], {}):
+            raise ValueError(f"disk.{_k}={disk.get(_k)!r} unsupported: "
+                             f"ext4-only, no LUKS-via-plan, no btrfs")
+    _fs = str(disk.get("filesystem", "") or "").lower()
+    if _fs and _fs != "ext4":
+        raise ValueError(f"disk.filesystem {_fs!r} unsupported (ext4 only)")
+
+    # features.* the unattended path cannot honor.
+    features = plan.get("features", {}) or {}
+    for _k in ("shareWindowsFilesInLinux", "shareLinuxFilesInWindows"):
+        if features.get(_k):
+            raise ValueError(f"features.{_k}=true unsupported: sharing "
+                             f"setup lives in Phase 10 OOBE, not the plan")
+    _prof = features.get("windowsProfilesJsonBase64", "") or ""
+    if _prof and _prof != "e30=":
+        raise ValueError("features.windowsProfilesJsonBase64 non-empty: "
+                         "profile import lives in Phase 10 OOBE")
+
     username = account.get("username", "")
     if username in ("root", "oinstaller"):
         raise ValueError(f"refusing reserved username {username!r}")
@@ -223,7 +245,10 @@ def find_staging_plan(staging_dir=None):
                     cand = os.path.join(mnt, "installation-plan.json")
                     if os.path.isfile(cand):
                         import shutil as _sh
-                        dst = "/tmp/installation-plan.json"
+                        import tempfile as _tf
+                        _fd, dst = _tf.mkstemp(prefix="ointos-plan-",
+                                               suffix=".json", dir="/tmp")
+                        os.close(_fd)
                         _sh.copy(cand, dst)
                         return dst
             finally:
@@ -382,20 +407,51 @@ def build(plan, cal_conf="/etc/calamares", windows_root=None):
         {"command": "-apt-get purge -y calamares calamares-settings-kubuntu calamares-settings-ubuntu-common calamares-data; apt-get autoremove --purge -y",
          "timeout": 300},
     ]
-    # Password hash: read NOW (live side, Windows root mounted) and bake
-    # into a chrooted chpasswd -e late command (same as Libertix
-    # configure_user: printf user:hash | chpasswd -e). Fail closed.
+    # Password hash: read NOW (live side, Windows root mounted) into a
+    # 0600 root-only sidecar next to cal_conf; the chrooted late command
+    # reads it, applies chpasswd -e (same as Libertix configure_user),
+    # then shreds it. shellprocess.conf itself never holds the secret.
+    # ponytail: secret still touches disk briefly; upgrade to pipe/fd
+    # passthrough when Calamares supports env/secret passing.
     if ident.get("passwordHashWindowsPath"):
         pw_hash = _read_password_hash(ident, windows_root)
+        _secret = os.path.join(cal_conf, ".ointos-pw-hash")
+        with open(_secret, "w") as _fh:
+            _fh.write(f"{ident['username']}:{pw_hash}\n")
+        os.chmod(_secret, 0o600)
         late.append({
-            "command": f"printf '%s:%s\\n' {shlex.quote(ident['username'])} "
-                       f"{shlex.quote(pw_hash)} | chpasswd -e",
+            "command": f"chpasswd -e < {_secret} && shred -u {_secret}",
             "timeout": 60})
     for cmd in plan.get("late_commands", []):
         late.append({"command": cmd, "timeout": 300})
     write_conf(os.path.join(moddir, "shellprocess.conf"),
                {"dontChroot": False, "timeout": 300, "verbose": True,
                 "script": late})
+
+    # --- passthrough module configs the exec chain needs but build()
+    # does not generate (machineid, fstab, localecfg, displaymanager,
+    # networkcfg, hwclock, grubcfg, unpackfs, umount + rootcheck guard).
+    # Calamares falls back to /usr/share + baked-in defaults for these,
+    # but --cal-conf pointing at a bare dir must NOT depend on ambient
+    # /etc/calamares surviving. Copy the interactive known-good configs;
+    # job modules needing no conf (machineid/fstab/.../umount) get an
+    # empty-document stub so the file exists either way.
+    _passthrough = ("unpackfs.conf", "displaymanager.conf", "finished.conf",
+                    "shellprocess_rootcheck.conf")
+    _stubs = ("machineid.conf", "fstab.conf", "localecfg.conf",
+              "networkcfg.conf", "hwclock.conf", "grubcfg.conf",
+              "umount.conf")
+    _src = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "..", "calamares-settings-ointos", "modules")
+    for _c in _passthrough:
+        _s, _d = os.path.join(_src, _c), os.path.join(moddir, _c)
+        if os.path.isfile(_s) and not os.path.isfile(_d):
+            import shutil as _sh
+            _sh.copy(_s, _d)
+    for _c in _stubs:
+        _d = os.path.join(moddir, _c)
+        if not os.path.isfile(_d):
+            write_conf(_d, {})
 
     # --- settings.conf: exec-only (unattended) -----------------------------
     # modules-search MUST be [ local ]: `local` = $LIBDIR/calamares/modules.
@@ -479,13 +535,15 @@ def main(argv=None):
         if os.path.isfile(sib):
             try:
                 state = load_plan(sib)
-                for k in ("planId", "plan_id", "planID"):
-                    if k in plan and k in state and \
-                            plan[k] != state[k]:
-                        print(f"FATAL: plan/state {k} mismatch", file=sys.stderr)
-                        return 2
-            except ValueError:
-                pass
+            except (ValueError, OSError) as e:
+                print(f"FATAL: unreadable sibling state {sib}: {e}",
+                      file=sys.stderr)
+                return 2
+            for k in ("planId", "plan_id", "planID"):
+                if k in plan and k in state and \
+                        plan[k] != state[k]:
+                    print(f"FATAL: plan/state {k} mismatch", file=sys.stderr)
+                    return 2
     try:
         build(plan, args.cal_conf, windows_root=args.windows_root)
     except ValueError as e:
