@@ -1,0 +1,18 @@
+# Libertix upstream pin (windows-installer/upstream/ git submodule)
+#
+# The submodule points at ekimiateam/libertix. This file records the exact
+# commit OintOS was validated against, so a future sync is a deliberate bump
+# (update hash here + re-run contract tests) rather than silent drift.
+#
+# Per docs/decisions/002-libertix-fork-strategy.md: upstream/ stays
+# minimally modified (modification markers where OintOS diverges); all
+# distro-specific code lives in ointos/.
+UPSTREAM_URL=https://github.com/ekimiateam/libertix.git
+UPSTREAM_COMMIT=8d19b4c9099f50c999c3e4586cbbda2fd67a510a
+UPSTREAM_DESCRIBE=0.3-14-g8d19b4c
+PIN_DATE=2026-09-10
+
+# OintOS deviations from upstream (UEFI-only first cut):
+# - staging volume label: OINTOSSTG (upstream LIBERTIXSTG)
+# - target fs: ext4 via Calamares (upstream ext4 via unsquashfs flow)
+# - live install engine: Calamares + plan.py (not Libertix live scripts)
