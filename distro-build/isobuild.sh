@@ -180,7 +180,7 @@ debootstrap \
     --verbose \
     "$DISTRO" \
     "$CHROOT_DIR" \
-    http://archive.ubuntu.com/ubuntu
+    http://tr.archive.ubuntu.com/ubuntu
 
 setup_chroot "$CHROOT_DIR"
 
@@ -216,8 +216,8 @@ export DEBIAN_FRONTEND=noninteractive
 
 # Default repos already point at resolute via debootstrap; enable all areas
 cat > /etc/apt/sources.list <<SOURCES_EOF
-deb http://archive.ubuntu.com/ubuntu resolute main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu resolute-updates main restricted universe multiverse
+deb http://tr.archive.ubuntu.com/ubuntu resolute main restricted universe multiverse
+deb http://tr.archive.ubuntu.com/ubuntu resolute-updates main restricted universe multiverse
 deb http://security.ubuntu.com/ubuntu resolute-security main restricted universe multiverse
 SOURCES_EOF
 
