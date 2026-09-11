@@ -501,8 +501,10 @@ def main(argv=None):
     ap.add_argument("plan", nargs="?",
                     help="path to YAML/JSON install plan "
                          "(default: staging discovery)")
-    ap.add_argument("--cal-conf", default="/etc/calamares",
-                    help="Calamares config dir (default /etc/calamares)")
+    ap.add_argument("--cal-conf", default=None,
+                    help="Calamares config dir (default: /etc/calamares; "
+                         "a temp dir when --dry-run without --cal-conf, so "
+                         "a dry run never clobbers the live installer)")
     ap.add_argument("--dry-run", action="store_true",
                     help="write configs but do not run calamares")
     ap.add_argument("--no-sudo", action="store_true",
@@ -544,12 +546,20 @@ def main(argv=None):
                         plan[k] != state[k]:
                     print(f"FATAL: plan/state {k} mismatch", file=sys.stderr)
                     return 2
+    cal_conf = args.cal_conf
+    if args.dry_run and not cal_conf:
+        # build27 lesson: a bare --dry-run wrote /etc/calamares and the next
+        # interactive install inherited the unattended configs (empty ESP).
+        import tempfile as _tf
+        cal_conf = _tf.mkdtemp(prefix="ointos-plan-dryrun-")
+    elif not cal_conf:
+        cal_conf = "/etc/calamares"
     try:
-        build(plan, args.cal_conf, windows_root=args.windows_root)
+        build(plan, cal_conf, windows_root=args.windows_root)
     except ValueError as e:
         print(f"FATAL: {e}", file=sys.stderr)
         return 2
-    print(f"Wrote Calamares configs to {args.cal_conf}")
+    print(f"Wrote Calamares configs to {cal_conf}")
 
     if args.dry_run:
         print("Dry run: not running calamares.")

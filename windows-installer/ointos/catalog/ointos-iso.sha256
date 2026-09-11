@@ -5,6 +5,9 @@
 # Update both lines together when a new build is released; never bump
 # the URL without the hash (fail-closed, same rule as plan.py).
 #
-# PLACEHOLDER — fill in after the next batched ISO build lands:
-ISO_URL=https://example.invalid/ointos/ointos-26.04-amd64.iso
-ISO_SHA256=REPLACE_WITH_SHA256_OF_RELEASED_ISO
+# build27 (2026-09-11) — GitHub release, 2 parça (2GB limit):
+# https://github.com/ervinnasiri-99/ointos/releases/tag/build27
+# Birleştir: cat OintOS-1.0-amd64.iso.part-aa OintOS-1.0-amd64.iso.part-ab > OintOS-1.0-amd64.iso
+ISO_URL=https://github.com/ervinnasiri-99/ointos/releases/download/build27/OintOS-1.0-amd64.iso.part-aa
+ISO_URL_PART2=https://github.com/ervinnasiri-99/ointos/releases/download/build27/OintOS-1.0-amd64.iso.part-ab
+ISO_SHA256=f9f71483d352daa6c64780e406f6f878abebe3b933abffa096145565a458a852
